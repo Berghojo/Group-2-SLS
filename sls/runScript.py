@@ -1,14 +1,15 @@
 from absl import app
 from sls import Env, Runner
 from sls.agents import *
+from sls.agents.BasicAgent import BasicAgent
 
 _CONFIG = dict(
     episodes=100,
-    screen_size=32,
-    minimap_size=32,
+    screen_size=64,
+    minimap_size=64,
     visualize=False,
     train=True,
-    agent=RandomAgent,
+    agent=BasicAgent,
     load_path='./graphs/...'
 )
 
