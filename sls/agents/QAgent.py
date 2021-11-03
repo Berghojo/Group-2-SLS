@@ -1,11 +1,16 @@
 from sls.agents import AbstractAgent
 import numpy as np
+from sls.Qtable import Qtable
+import random
+
+EPSILON = 0.7
 
 
-class BasicAgent(AbstractAgent):
+class QAgent(AbstractAgent):
 
     def __init__(self, train, screen_size):
-        super(BasicAgent, self).__init__(screen_size)
+        super(QAgent, self).__init__(screen_size)
+        self.qtable = Qtable()
 
     def step(self, obs):
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
@@ -15,16 +20,22 @@ class BasicAgent(AbstractAgent):
             marine_coords = self._get_unit_pos(marine)
             beacon_object = self._get_beacon(obs)
             beacon_coords = self._get_unit_pos(beacon_object)
-            direction = beacon_coords - marine_coords
-            direction[direction > 0] = 1
-            direction[direction < 0] = -1
+            distance = beacon_coords - marine_coords
 
-            # Qtable array rows = direction
+            # Choose random direction
+            p = random.random()
 
-            for key in self._DIRECTIONS:
-                movement = self._DIRECTIONS[key]
-                if np.array_equal(movement, direction):
-                    d = key
+            # Perform action
+            if p < EPSILON:
+                d = np.random.choice(list(self._DIRECTIONS.keys()))
+            else:  # pull current best action
+                d = self.qtable.get_best_action(distance)
+
+            # Measure reward (step -1 & beacon +1)
+            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d)
+
+            # Update Q-table
+
 
             return self._dir_to_sc2_action(d, marine_coords)
         else:

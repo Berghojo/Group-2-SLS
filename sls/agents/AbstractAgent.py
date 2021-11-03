@@ -19,6 +19,9 @@ class AbstractAgent:
     _NO_OP = actions.FUNCTIONS.no_op()
     _SELECT_ARMY = actions.FUNCTIONS.select_army("select")
 
+    def get_directions(self):
+        return self._DIRECTIONS
+
     def __init__(self, screen_size):
         self.screen_size = screen_size
 

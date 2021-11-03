@@ -1,7 +1,7 @@
 from absl import app
 from sls import Env, Runner
 from sls.agents import *
-from sls.agents.BasicAgent import BasicAgent
+from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
     episodes=100,
@@ -9,7 +9,7 @@ _CONFIG = dict(
     minimap_size=64,
     visualize=False,
     train=True,
-    agent=BasicAgent,
+    agent=QAgent,
     load_path='./graphs/...'
 )
 
