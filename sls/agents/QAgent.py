@@ -1,5 +1,5 @@
 import os.path
-
+from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
 from sls.Qtable import Qtable
@@ -16,7 +16,7 @@ class QAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self._EPSILON-1/50 > 0.1:
-            self._EPSILON -= 1/50
+            self._EPSILON -= 1/1000
         else:
             self._EPSILON = 0.1
         return self._EPSILON
@@ -31,8 +31,6 @@ class QAgent(AbstractAgent):
             beacon_coords = self._get_unit_pos(beacon_object)
             marine_coords = self._get_unit_pos(marine)
             distance = beacon_coords - marine_coords
-            distance[distance > 0] = 1
-            distance[distance < 0] = -1
             # Choose random direction
             p = random.random()
 
@@ -40,10 +38,10 @@ class QAgent(AbstractAgent):
             if p < self._EPSILON:
                 d = np.random.choice(list(self._DIRECTIONS.keys()))
             else:  # pull current best action
-                d = self.qtable.get_best_action(distance, self._DIRECTIONS.keys())
+                d = self.qtable.get_best_action(distance, distance, self._DIRECTIONS.keys())
 
             # Measure reward (step -1 & beacon +1)
-            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d, obs.reward, marine_coords, beacon_coords)
+            self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance), self._DIRECTIONS[d], d, obs.reward, marine_coords, beacon_coords)
             #print(self.qtable.qtable)
             # Update Q-table
 
