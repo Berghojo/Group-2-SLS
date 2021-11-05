@@ -4,7 +4,7 @@ from sls.agents import *
 from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
-    episodes=100,
+    episodes=1000,
     screen_size=64,
     minimap_size=64,
     visualize=False,

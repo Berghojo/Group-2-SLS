@@ -3,14 +3,14 @@ import numpy as np
 from sls.Qtable import Qtable
 import random
 
-EPSILON = 0.7
+EPSILON = 0.9
 
 
 class QAgent(AbstractAgent):
 
     def __init__(self, train, screen_size):
         super(QAgent, self).__init__(screen_size)
-        self.qtable = Qtable()
+        self.qtable = Qtable(self.get_directions().keys())
 
     def step(self, obs):
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
@@ -32,10 +32,9 @@ class QAgent(AbstractAgent):
                 d = self.qtable.get_best_action(distance)
 
             # Measure reward (step -1 & beacon +1)
-            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d)
+            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d, obs.reward)
 
             # Update Q-table
-
 
             return self._dir_to_sc2_action(d, marine_coords)
         else:
