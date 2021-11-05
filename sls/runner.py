@@ -2,7 +2,6 @@ import datetime
 import os
 import tensorflow as tf
 
-
 class Runner:
     def __init__(self, agent, env, train, load_path):
 
@@ -49,3 +48,5 @@ class Runner:
                 obs = self.env.step(action)
                 self.score += obs.reward
             self.summarize()
+            print(self.agent.epsilon_decay(self.episode))
+

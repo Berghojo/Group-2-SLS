@@ -1,7 +1,8 @@
-def create_states(number):
+def create_states():
     states = []
-    for i in range(-number, number):
-        for e in range(-number, number):
+    number = [-1, 0, 1]
+    for i in number:
+        for e in number:
             states.append(" ".join(str(x) for x in [i, e]))
     return states
 

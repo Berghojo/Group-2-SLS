@@ -4,10 +4,10 @@ from sls.agents import *
 from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
-    episodes=1000,
+    episodes=100,
     screen_size=64,
     minimap_size=64,
-    visualize=False,
+    visualize=True,
     train=True,
     agent=QAgent,
     load_path='./graphs/...'
