@@ -18,12 +18,9 @@ class AbstractAgent:
     _MOVE_SCREEN = actions.FUNCTIONS.Move_screen
     _NO_OP = actions.FUNCTIONS.no_op()
     _SELECT_ARMY = actions.FUNCTIONS.select_army("select")
-    _EPSILON = 0.9
 
-    def epsilon_decay(self, ep):
-        if self._EPSILON > 0.1:
-            self._EPSILON -= self._EPSILON/100
-        return self._EPSILON
+
+
     def get_directions(self):
         return self._DIRECTIONS
 
@@ -37,7 +34,9 @@ class AbstractAgent:
     @abstractmethod
     def save_model(self, path):
         ...
-
+    @abstractmethod
+    def epsilon_decay(self, ep):
+        ...
     @abstractmethod
     def load_model(self, path):
         ...

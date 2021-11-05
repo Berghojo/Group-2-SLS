@@ -12,16 +12,24 @@ class QAgent(AbstractAgent):
     def __init__(self, train, screen_size):
         super(QAgent, self).__init__(screen_size)
         self.qtable = Qtable(self.get_directions().keys())
+        self._EPSILON = 1
 
+    def epsilon_decay(self, ep):
+        if self._EPSILON-1/50 > 0.1:
+            self._EPSILON -= 1/50
+        else:
+            self._EPSILON = 0.1
+        return self._EPSILON
 
     def step(self, obs):
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
             marine = self._get_marine(obs)
             if marine is None:
                 return self._NO_OP
-            marine_coords = self._get_unit_pos(marine)
+
             beacon_object = self._get_beacon(obs)
             beacon_coords = self._get_unit_pos(beacon_object)
+            marine_coords = self._get_unit_pos(marine)
             distance = beacon_coords - marine_coords
             distance[distance > 0] = 1
             distance[distance < 0] = -1
@@ -35,7 +43,7 @@ class QAgent(AbstractAgent):
                 d = self.qtable.get_best_action(distance, self._DIRECTIONS.keys())
 
             # Measure reward (step -1 & beacon +1)
-            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d, obs.reward, marine_coords)
+            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d, obs.reward, marine_coords, beacon_coords)
             #print(self.qtable.qtable)
             # Update Q-table
 
