@@ -15,10 +15,12 @@ class QAgent(AbstractAgent):
         self._EPSILON = 1
 
     def epsilon_decay(self, ep):
-        if self._EPSILON-1/50 > 0.1:
-            self._EPSILON -= 1/50
+        if self._EPSILON-1/1000 > 0.1:
+            self._EPSILON -= 1/1000
         else:
             self._EPSILON = 0.1
+        if ep > 1500:
+            self._EPSILON = 0
         return self._EPSILON
 
     def step(self, obs):
@@ -26,28 +28,25 @@ class QAgent(AbstractAgent):
             marine = self._get_marine(obs)
             if marine is None:
                 return self._NO_OP
-
             beacon_object = self._get_beacon(obs)
             beacon_coords = self._get_unit_pos(beacon_object)
             marine_coords = self._get_unit_pos(marine)
             distance = beacon_coords - marine_coords
             distance[distance > 0] = 1
             distance[distance < 0] = -1
-            # Choose random direction
             p = random.random()
+            direction_key = self.qtable.get_best_action(distance)
+            # Choose random direction
+            if p < self._EPSILON:
+                rest_direction_keys= list(self._DIRECTIONS.keys())
+                rest_direction_keys.remove(direction_key)
+                direction_key = np.random.choice(rest_direction_keys)
+
+            # Update Q-table
+            self.qtable.update_q_value(distance, self._DIRECTIONS[direction_key], direction_key, obs.reward, marine_coords, beacon_coords)
 
             # Perform action
-            if p < self._EPSILON:
-                d = np.random.choice(list(self._DIRECTIONS.keys()))
-            else:  # pull current best action
-                d = self.qtable.get_best_action(distance, self._DIRECTIONS.keys())
-
-            # Measure reward (step -1 & beacon +1)
-            self.qtable.update_q_value(distance, self._DIRECTIONS[d], d, obs.reward, marine_coords, beacon_coords)
-            #print(self.qtable.qtable)
-            # Update Q-table
-
-            return self._dir_to_sc2_action(d, marine_coords)
+            return self._dir_to_sc2_action(direction_key, marine_coords)
         else:
             return self._SELECT_ARMY
 
