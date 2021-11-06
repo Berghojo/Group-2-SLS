@@ -6,7 +6,6 @@ from sls.Qtable import Qtable
 import random
 
 
-
 class QAgent(AbstractAgent):
 
     def __init__(self, train, screen_size):
@@ -15,12 +14,15 @@ class QAgent(AbstractAgent):
         self._EPSILON = 1
 
     def epsilon_decay(self, ep):
-        if self._EPSILON-1/1000 > 0.1:
-            self._EPSILON -= 1/1000
+        if self._EPSILON - 1 / 4000 > 0.1:
+            self._EPSILON -= 1 / 4000
         else:
             self._EPSILON = 0.1
         if ep > 1500:
             self._EPSILON = 0
+        return self._EPSILON
+
+    def get_epsilon(self):
         return self._EPSILON
 
     def step(self, obs):
@@ -38,7 +40,7 @@ class QAgent(AbstractAgent):
             direction_key = self.qtable.get_best_action(distance)
             # Choose random direction
             if p < self._EPSILON:
-                rest_direction_keys= list(self._DIRECTIONS.keys())
+                rest_direction_keys = list(self._DIRECTIONS.keys())
                 rest_direction_keys.remove(direction_key)
                 direction_key = np.random.choice(rest_direction_keys)
 
