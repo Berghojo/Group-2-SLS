@@ -1,5 +1,5 @@
 import os.path
-
+import datetime
 from sls.agents import AbstractAgent
 import numpy as np
 from sls.Qtable import Qtable
@@ -43,7 +43,8 @@ class QAgent(AbstractAgent):
                 direction_key = np.random.choice(rest_direction_keys)
 
             # Update Q-table
-            self.qtable.update_q_value(distance, self._DIRECTIONS[direction_key], direction_key, obs.reward, marine_coords, beacon_coords)
+            self.qtable.update_q_value(distance, self._DIRECTIONS[direction_key], direction_key, obs.reward,
+                                       marine_coords, beacon_coords)
 
             # Perform action
             return self._dir_to_sc2_action(direction_key, marine_coords)
@@ -51,7 +52,9 @@ class QAgent(AbstractAgent):
             return self._SELECT_ARMY
 
     def save_model(self, filename):
-        self.qtable.qtable.to_pickle("./pickles/test.pkl")
+        experiment_iteration = '1'
+        self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
+                                     experiment_iteration + ".pkl")
         pass
 
     def load_model(self, filename):
