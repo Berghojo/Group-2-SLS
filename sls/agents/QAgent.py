@@ -4,6 +4,7 @@ from sls.agents import AbstractAgent
 import numpy as np
 from sls.Qtable import Qtable
 import random
+import pandas as pd
 
 
 class QAgent(AbstractAgent):
@@ -11,14 +12,19 @@ class QAgent(AbstractAgent):
     def __init__(self, train, screen_size):
         super(QAgent, self).__init__(screen_size)
         self.qtable = Qtable(self.get_directions().keys())
-        self._EPSILON = 1
+        self.train = train
+        if not self.train:
+            self.load_model()
+            self._EPSILON = 0
+        else:
+            self._EPSILON = 1
 
     def epsilon_decay(self, ep):
-        if self._EPSILON - 1 / 4000 > 0.1:
-            self._EPSILON -= 1 / 4000
+        if self._EPSILON - 1 / 3000 > 0.1:
+            self._EPSILON -= 1 / 3000
         else:
             self._EPSILON = 0.1
-        if ep > 1500:
+        if ep > 4000:
             self._EPSILON = 0
         return self._EPSILON
 
@@ -45,8 +51,9 @@ class QAgent(AbstractAgent):
                 direction_key = np.random.choice(rest_direction_keys)
 
             # Update Q-table
-            self.qtable.update_q_value(distance, self._DIRECTIONS[direction_key], direction_key, obs.reward,
-                                       marine_coords, beacon_coords)
+            if self.train:
+                self.qtable.update_q_value(distance, self._DIRECTIONS[direction_key], direction_key, obs.reward,
+                                           marine_coords, beacon_coords)
 
             # Perform action
             return self._dir_to_sc2_action(direction_key, marine_coords)
@@ -60,4 +67,5 @@ class QAgent(AbstractAgent):
         pass
 
     def load_model(self, filename):
+        self.qtable.qtable = pd.read_pickle('./pickles/qtable.pkl')
         pass

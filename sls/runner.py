@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 import numpy as np
 
+
 class Runner:
     def __init__(self, agent, env, train, load_path):
 
@@ -21,7 +22,7 @@ class Runner:
         self.writer = tf.summary.create_file_writer(self.path)
 
         if not self.train and load_path is not None and os.path.isdir(load_path):
-                self.agent.load_model(load_path)
+            self.agent.load_model(load_path)
 
     def summarize(self):
 
@@ -31,10 +32,8 @@ class Runner:
             self.scores_batch.append(self.score)
             if len(self.scores_batch) == 50:
                 average = np.mean(self.scores_batch)
-                tf.summary.scalar('Moving Average Score (50) per Episode', average, step=self.episode-50)
+                tf.summary.scalar('Moving Average Score (50) per Episode', average, step=self.episode - 50)
                 self.scores_batch.pop(0)
-
-
 
         if self.train and self.episode % 10 == 0:
             self.agent.save_model(self.path)
@@ -56,4 +55,3 @@ class Runner:
                 self.score += obs.reward
             self.summarize()
             print(self.agent.epsilon_decay(self.episode))
-
