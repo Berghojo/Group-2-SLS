@@ -23,13 +23,14 @@ def create_states():
         split_numbers = []
         if len(coordinates) == 0:
             break
-        for i in range(4):
+        for i in range(4):      # TODO: Try range 4 and 2
             split_numbers.append(coordinates.pop(0))
 
         grouped_coordinates.append(split_numbers)
 
     groups = []
     index = 0
+
     for el in grouped_coordinates:
         for el2 in grouped_coordinates:
             index += 1
