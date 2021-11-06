@@ -32,7 +32,6 @@ class Qtable():
         self.qtable.loc[helper.convert_array_to_string(state), direction] = new_q
         return self.qtable
 
-
     def get_best_action(self, state):
         row =self.qtable.loc[helper.convert_array_to_string(state)]
         #If we have no single best option we choose a random one

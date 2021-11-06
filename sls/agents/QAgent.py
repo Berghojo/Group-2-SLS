@@ -14,7 +14,8 @@ class QAgent(AbstractAgent):
         self.qtable = Qtable(self.get_directions().keys())
         self.train = train
         if not self.train:
-            self.load_model()
+            print("Were not training")
+
             self._EPSILON = 0
         else:
             self._EPSILON = 1
@@ -66,6 +67,7 @@ class QAgent(AbstractAgent):
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, filename):
-        self.qtable.qtable = pd.read_pickle('./pickles/qtable.pkl')
+    def load_model(self, directory):
+        qtable = pd.read_pickle(directory + 'qtable.pkl')
+        self.qtable.qtable = qtable
         pass

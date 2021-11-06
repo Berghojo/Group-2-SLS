@@ -10,7 +10,7 @@ _CONFIG = dict(
     visualize=True,
     train=False,
     agent=QAgent,
-    load_path='./graphs/...'
+    load_path='./pickles/'
 )
 
 
