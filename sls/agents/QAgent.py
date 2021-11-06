@@ -21,11 +21,11 @@ class QAgent(AbstractAgent):
             self._EPSILON = 1
 
     def epsilon_decay(self, ep):
-        if self._EPSILON - 1 / 3000 > 0.1:
-            self._EPSILON -= 1 / 3000
+        if self._EPSILON - 1 / 7000 > 0.1:
+            self._EPSILON -= 1 / 7000
         else:
             self._EPSILON = 0.1
-        if ep > 4000:
+        if ep > 9000:
             self._EPSILON = 0
         return self._EPSILON
 
@@ -45,6 +45,7 @@ class QAgent(AbstractAgent):
             distance[distance < 0] = -1
             p = random.random()
             direction_key = self.qtable.get_best_action(distance)
+
             # Choose random direction
             if p < self._EPSILON:
                 rest_direction_keys = list(self._DIRECTIONS.keys())
