@@ -67,7 +67,7 @@ class QAgent(AbstractAgent):
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory):
-        qtable = pd.read_pickle(directory + 'qtable.pkl')
+    def load_model(self, directory, filename='qtable.pkl'):
+        qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass
