@@ -22,12 +22,13 @@ class QAgent(AbstractAgent):
             self._EPSILON = 1
 
     def epsilon_decay(self, ep):
-        if self._EPSILON - 1 / 1000 > 0.1:
-            self._EPSILON -= 1 / 1000
-        else:
-            self._EPSILON = 0.1
-        if ep > 1500:
-            self._EPSILON = 0
+        if self.train:
+            if self._EPSILON - 1 / 7000 > 0.1:
+                self._EPSILON -= 1 / 7000
+            else:
+                self._EPSILON = 0.1
+            if ep > 9000:
+                self._EPSILON = 0
         return self._EPSILON
 
     def step(self, obs):
