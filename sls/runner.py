@@ -10,7 +10,7 @@ class Runner:
         self.agent = agent
         self.env = env
         self.train = train  # run only or train_model model?
-
+        self.scores_batch = []
         self.score = 0  # store for the scores of an episode
         self.episode = 1  # episode counter
 

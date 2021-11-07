@@ -23,12 +23,15 @@ class QAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self.train:
-            if self._EPSILON - 1 / 7000 > 0.1:
-                self._EPSILON -= 1 / 7000
+            if self._EPSILON - 1 / 3000 > 0.1:
+                self._EPSILON -= 1 / 3000
             else:
                 self._EPSILON = 0.1
-            if ep > 9000:
+            if ep > 4000:
                 self._EPSILON = 0
+        return self._EPSILON
+
+    def get_epsilon(self):
         return self._EPSILON
 
     def step(self, obs):
@@ -46,10 +49,11 @@ class QAgent(AbstractAgent):
             direction_key = self.qtable.get_best_action(distance)
 
             # Perform action
-            if p < self._EPSILON:   # Choose random direction
+            if p < self._EPSILON:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
             if self.train:  # Update Q-table
-                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance), self._DIRECTIONS[direction_key],
+                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance),
+                                           self._DIRECTIONS[direction_key],
                                            direction_key, obs.reward, marine_coordinates, beacon_coordinates)
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
