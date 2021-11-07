@@ -1,6 +1,7 @@
 import datetime
 import os
 import tensorflow as tf
+import numpy as np
 
 
 class Runner:
@@ -24,12 +25,15 @@ class Runner:
             self.agent.load_model(load_path)
 
     def summarize(self):
-        # self.writer.add_summary(tf.Summary(
-        #     value=[tf.Summary.Value(tag='Score per Episode', simple_value=self.score)]),
-        #     self.episode
-        # )
         with self.writer.as_default():
+            tf.summary.scalar('Epsilon per Episode', self.agent.get_epsilon(), step=self.episode)
             tf.summary.scalar('Score per Episode', self.score, step=self.episode)
+            self.scores_batch.append(self.score)
+            if len(self.scores_batch) == 50:
+                average = np.mean(self.scores_batch)
+                tf.summary.scalar('Moving Average Score (50) per Episode', average, step=self.episode - 50)
+                self.scores_batch.pop(0)
+
         if self.train and self.episode % 10 == 0:
             self.agent.save_model(self.path)
             try:

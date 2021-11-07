@@ -56,12 +56,12 @@ class QAgent(AbstractAgent):
             return self._SELECT_ARMY
 
     def save_model(self, filename):
-        experiment_iteration = '1'
+        experiment_iteration = '2'
         self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable.pkl'):
+    def load_model(self, directory, filename='qtable_211107_1.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass
