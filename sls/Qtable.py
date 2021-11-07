@@ -18,7 +18,10 @@ class Qtable():
     def update_q_value(self, state, action, direction_key, reward, position, beacon_coordinates):
         # Q(s, a) <- Q(s, a) + a[r + Q(s, a)]
         current_q = self.qtable.loc[state, direction_key]
-        future_state = helper.search(self.DICTIONARY, beacon_coordinates - position + action)
+        future_position = position + action
+        future_position[future_position < 0] = 0
+        future_position[future_position > 63] = 63
+        future_state = helper.search(self.DICTIONARY, beacon_coordinates - future_position)
         if reward > 0:
             new_q = current_q + self.LEARNING_RATE * (reward - current_q)
         else:
