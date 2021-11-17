@@ -1,4 +1,5 @@
 import os.path
+import scipy
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
@@ -15,6 +16,7 @@ class SarsaAgent(AbstractAgent):
         super(SarsaAgent, self).__init__(screen_size)
         self.qtable = SarsaQtable(self.get_directions().keys())
         self._EPSILON = 0.9
+        self._TEMPERATURE = 0.5
         self.train = train
         self.action = 0
         if not self.train:
@@ -35,6 +37,12 @@ class SarsaAgent(AbstractAgent):
     def get_epsilon(self):
         return self._EPSILON
 
+    def boltzmann_select(self, state):
+        i = self.qtable.loc[state]
+        q_dist = scipy.softmax(i / self._TEMPERATURE)
+        action = np.random.choice(self._DIRECTIONS.keys(), p=q_dist)
+        return action
+
     def step(self, obs):
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
             marine = self._get_marine(obs)
@@ -49,27 +57,32 @@ class SarsaAgent(AbstractAgent):
             # Pull current best action
 
             # Perform action
-            if p < self._EPSILON:  # Choose random direction
+            if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
+                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance),
+                                           self._DIRECTIONS[direction_key],
+                                           direction_key, obs.reward, marine_coordinates, beacon_coordinates)
             else:
                 if self.train:  # Update Q-table
                     direction_key = self.qtable.get_best_action(distance)
                     direction_key = self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance),
-                                               self._DIRECTIONS[direction_key],
-                                               direction_key, obs.reward, marine_coordinates, beacon_coordinates)
+                                                               self._DIRECTIONS[direction_key],
+                                                               direction_key, obs.reward, marine_coordinates,
+                                                               beacon_coordinates)
                 else:
                     direction_key = self.qtable.get_best_action(distance)
+            #direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
     def save_model(self, filename):
-        experiment_iteration = '3'
+        experiment_iteration = '4'
         self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable_211117_2.pkl'):
+    def load_model(self, directory, filename='qtable_211117_3.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass

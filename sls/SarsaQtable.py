@@ -29,6 +29,8 @@ class SarsaQtable():
         else:
             new_q = current_q + self.LEARNING_RATE * (reward + future_q * self.DISCOUNT - current_q)
         self.qtable.loc[state, direction_key] = new_q
+        if new_q > 0:
+            print(new_q)
         return future_state_action
 
     def get_best_action(self, direction_key):

@@ -12,6 +12,7 @@ def group_into_states(elements_1, elements_2):
             states.append([x, y])
     if [0, 0] in states:
         states.remove([0, 0])
+    print(states)
     return states
 
 
