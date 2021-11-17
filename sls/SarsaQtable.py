@@ -22,14 +22,12 @@ class SarsaQtable():
         future_position[future_position < 0] = 0
         future_position[future_position > 63] = 63
         future_state_action = self.get_best_action(future_position)
-        future_state = self.qtable.loc[helper.search(self.DICTIONARY,
-                                                     future_position)]
-        future_q = current_q = self.qtable.loc[future_state, future_state_action]
+        future_state = helper.search(self.DICTIONARY, future_position)
+        future_q = self.qtable.loc[future_state, future_state_action]
         if reward > 0:
             new_q = current_q + self.LEARNING_RATE * (reward - current_q)
         else:
             new_q = current_q + self.LEARNING_RATE * (reward + future_q * self.DISCOUNT - current_q)
-        print(state, direction_key)
         self.qtable.loc[state, direction_key] = new_q
         return future_state_action
 
