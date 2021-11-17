@@ -2,7 +2,7 @@ import os.path
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
-from sls.Qtable import Qtable
+from sls.SarsaQtable import SarsaQtable
 import random
 import datetime
 import os
@@ -13,7 +13,7 @@ class SarsaAgent(AbstractAgent):
 
     def __init__(self, screen_size, train=True):
         super(SarsaAgent, self).__init__(screen_size)
-        self.qtable = Qtable(self.get_directions().keys())
+        self.qtable = SarsaQtable(self.get_directions().keys())
         self._EPSILON = 0.9
         self.train = train
         self.action = 0
@@ -64,7 +64,7 @@ class SarsaAgent(AbstractAgent):
             return self._SELECT_ARMY
 
     def save_model(self, filename):
-        experiment_iteration = '2'
+        experiment_iteration = '3'
         self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
                                      experiment_iteration + ".pkl")
         pass

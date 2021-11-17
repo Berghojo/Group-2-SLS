@@ -21,20 +21,21 @@ class SarsaQtable():
         future_position = position + action
         future_position[future_position < 0] = 0
         future_position[future_position > 63] = 63
-        future_state = helper.search(self.DICTIONARY, beacon_coordinates - future_position)
-        future_state_action = self.get_best_action(future_state)
+        future_state_action = self.get_best_action(future_position)
+        future_state = self.qtable.loc[helper.search(self.DICTIONARY,
+                                                     future_position)]
         future_q = current_q = self.qtable.loc[future_state, future_state_action]
         if reward > 0:
             new_q = current_q + self.LEARNING_RATE * (reward - current_q)
         else:
             new_q = current_q + self.LEARNING_RATE * (reward + future_q * self.DISCOUNT - current_q)
+        print(state, direction_key)
         self.qtable.loc[state, direction_key] = new_q
         return future_state_action
 
     def get_best_action(self, direction_key):
         direction_key = list(direction_key)
         row = self.qtable.loc[helper.search(self.DICTIONARY, direction_key)]
-
         # If we have no single best option we choose a random one
         row = row.sample(frac=1)
         return row.idxmax()
