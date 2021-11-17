@@ -23,11 +23,11 @@ class QAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self.train:
-            if self._EPSILON - 1 / 3000 > 0.1:
-                self._EPSILON -= 1 / 3000
+            if self._EPSILON - 1 / 500 > 0.1:
+                self._EPSILON -= 1 / 500
             else:
                 self._EPSILON = 0.1
-            if ep > 4000:
+            if ep > 500:
                 self._EPSILON = 0
         return self._EPSILON
 
@@ -65,7 +65,7 @@ class QAgent(AbstractAgent):
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable_211107_1.pkl'):
+    def load_model(self, directory, filename='qtable_211117_2.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass

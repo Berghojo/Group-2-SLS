@@ -7,7 +7,7 @@ import random
 
 class Qtable():
 
-    def __init__(self, actions, field_size=64, learning_rate=0.1, discount=0.75):
+    def __init__(self, actions, learning_rate=0.5, discount=0.75):
         self.actions = actions
         self.LEARNING_RATE = learning_rate
         self.DISCOUNT = discount
