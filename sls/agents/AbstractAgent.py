@@ -19,6 +19,11 @@ class AbstractAgent:
     _NO_OP = actions.FUNCTIONS.no_op()
     _SELECT_ARMY = actions.FUNCTIONS.select_army("select")
 
+
+
+    def get_directions(self):
+        return self._DIRECTIONS
+
     def __init__(self, screen_size):
         self.screen_size = screen_size
 
@@ -29,7 +34,9 @@ class AbstractAgent:
     @abstractmethod
     def save_model(self, path):
         ...
-
+    @abstractmethod
+    def epsilon_decay(self, ep):
+        ...
     @abstractmethod
     def load_model(self, path):
         ...

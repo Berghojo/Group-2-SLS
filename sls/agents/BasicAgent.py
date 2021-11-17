@@ -19,12 +19,13 @@ class BasicAgent(AbstractAgent):
             direction[direction > 0] = 1
             direction[direction < 0] = -1
 
+            # Qtable array rows = direction
+
             for key in self._DIRECTIONS:
                 movement = self._DIRECTIONS[key]
                 if np.array_equal(movement, direction):
                     d = key
 
-            print(d)
             return self._dir_to_sc2_action(d, marine_coords)
         else:
             return self._SELECT_ARMY
