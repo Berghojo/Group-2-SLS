@@ -1,3 +1,3 @@
 import pandas as pd
-test = pd.read_pickle('./pickles/qtable_211117_3.pkl')
+test = pd.read_pickle('./pickles/qtable_211118_SARSA.pkl')
 print(test)

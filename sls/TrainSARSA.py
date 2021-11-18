@@ -4,7 +4,7 @@ from sls.agents import *
 
 
 _CONFIG = dict(
-    episodes=500,
+    episodes=5000,
     screen_size=64,
     minimap_size=64,
     visualize=True,

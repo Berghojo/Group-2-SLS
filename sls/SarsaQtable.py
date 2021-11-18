@@ -15,22 +15,18 @@ class SarsaQtable():
         self.qtable = pd.DataFrame(0, index=indexes, columns=actions)
         self.DICTIONARY = states
 
-    def update_q_value(self, state, action, direction_key, reward, position, beacon_coordinates):
+    def update_q_value(self, state, action, direction_key, reward, distance):
         # Q(s, a) <- Q(s, a) + a[r + Q(s, a)]
         current_q = self.qtable.loc[state, direction_key]
-        future_position = position + action
-        future_position[future_position < 0] = 0
-        future_position[future_position > 63] = 63
-        future_state_action = self.get_best_action(future_position)
-        future_state = helper.search(self.DICTIONARY, future_position)
+        future_distance = np.subtract(distance, action)
+        future_state_action = self.get_best_action(future_distance)
+        future_state = helper.search(self.DICTIONARY, future_distance)
         future_q = self.qtable.loc[future_state, future_state_action]
-        if reward > 0:
+        if reward == 1:
             new_q = current_q + self.LEARNING_RATE * (reward - current_q)
         else:
             new_q = current_q + self.LEARNING_RATE * (reward + future_q * self.DISCOUNT - current_q)
         self.qtable.loc[state, direction_key] = new_q
-        if new_q > 0:
-            print(new_q)
         return future_state_action
 
     def get_best_action(self, direction_key):

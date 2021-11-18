@@ -19,6 +19,7 @@ class SarsaAgent(AbstractAgent):
         self._TEMPERATURE = 0.5
         self.train = train
         self.action = 0
+        self.current_distance = [0, 0]
         if not self.train:
             self._EPSILON = 0
         else:
@@ -26,11 +27,11 @@ class SarsaAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self.train:
-            if self._EPSILON - 1 / 500 > 0.1:
-                self._EPSILON -= 1 / 500
+            if self._EPSILON - 1 / 4000 > 0.1:
+                self._EPSILON -= 1 / 4000
             else:
                 self._EPSILON = 0.1
-            if ep > 500:
+            if ep > 4000:
                 self._EPSILON = 0
         return self._EPSILON
 
@@ -38,7 +39,7 @@ class SarsaAgent(AbstractAgent):
         return self._EPSILON
 
     def boltzmann_select(self, state):
-        i = self.qtable.loc[state]
+        i = self.qtable[state]
         q_dist = scipy.softmax(i / self._TEMPERATURE)
         action = np.random.choice(self._DIRECTIONS.keys(), p=q_dist)
         return action
@@ -48,7 +49,6 @@ class SarsaAgent(AbstractAgent):
             marine = self._get_marine(obs)
             if marine is None:
                 return self._NO_OP
-
             beacon_object = self._get_beacon(obs)
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
@@ -59,30 +59,37 @@ class SarsaAgent(AbstractAgent):
             # Perform action
             if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
-                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance),
+                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
                                            self._DIRECTIONS[direction_key],
-                                           direction_key, obs.reward, marine_coordinates, beacon_coordinates)
+                                           direction_key, obs.reward, self.current_distance)
             else:
                 if self.train:  # Update Q-table
                     direction_key = self.qtable.get_best_action(distance)
-                    direction_key = self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, distance),
+                    direction_key = self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY,
+                                                                             self.current_distance),
                                                                self._DIRECTIONS[direction_key],
-                                                               direction_key, obs.reward, marine_coordinates,
-                                                               beacon_coordinates)
+                                                               direction_key, obs.reward, self.current_distance)
+
                 else:
                     direction_key = self.qtable.get_best_action(distance)
             #direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+            if obs.reward == 1:
+                print(self.current_distance)
+                print('sad')
+            self.current_distance = distance
+
+
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
     def save_model(self, filename):
-        experiment_iteration = '4'
+        experiment_iteration = 'SARSA_5000'
         self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable_211117_3.pkl'):
+    def load_model(self, directory, filename='qtable_211118_SARSA_500.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass
