@@ -49,11 +49,14 @@ class SarsaAgent(AbstractAgent):
     def get_epsilon(self):
         return self._EPSILON
 
-    def boltzmann_select(self, state):
+    def boltzmann_select(self, state, obs):
         i = self.qtable.qtable.loc[state]
         q_dist = scipy.special.softmax(i / self._TEMPERATURE)
-        q_dist = list(q_dist)
+        #q_dist = list(q_dist)
         action = np.random.choice(list(self._DIRECTIONS.keys()), p=q_dist)
+        self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
+                                   self._DIRECTIONS[self._LASTDIRECTION],
+                                   self._LASTDIRECTION, obs.reward, self.current_distance)
         return action
 
     def step(self, obs):
@@ -69,22 +72,10 @@ class SarsaAgent(AbstractAgent):
             # Pull current best action
 
             # Perform action
-            if p < self._EPSILON and self.train:  # Choose random direction
-                direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
-                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
-                                           self._DIRECTIONS[self._LASTDIRECTION],
-                                           direction_key, obs.reward, self.current_distance)
+            if self.train:
+                direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance), obs)
             else:
-                if self.train:  # Update Q-table
-                    direction_key = self.qtable.get_best_action(distance)
-                    self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY,
-                                                             self.current_distance),
-                                               self._DIRECTIONS[self._LASTDIRECTION],
-                                               self._LASTDIRECTION, obs.reward, self.current_distance)
-
-                else:
-                    direction_key = self.qtable.get_best_action(distance)
-            # direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+                direction_key = self.qtable.get_best_action()
 
             if obs.reward == 1:
                 print(self.current_distance)
