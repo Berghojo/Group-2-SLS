@@ -16,7 +16,7 @@ class SarsaAgent(AbstractAgent):
         super(SarsaAgent, self).__init__(screen_size)
         self.qtable = SarsaQtable(self.get_directions().keys())
         self._EPSILON = 0.9
-        self._TEMPERATURE = 0.5
+        self._TEMPERATURE = 30
         self._LASTDIRECTION = 'N'
         self.train = train
         self.action = 0
@@ -38,8 +38,8 @@ class SarsaAgent(AbstractAgent):
 
     def temperature_decay(self, ep):
         if self.train:
-            if self._TEMPERATURE - 1 / 4000 > 0.1:
-                self._TEMPERATURE -= 1 / 4000
+            if self._TEMPERATURE - 30 / 4000 > 0.1:
+                self._TEMPERATURE -= 30 / 4000
             else:
                 self._TEMPERATURE = 0.1
             if ep > 4000:
@@ -68,8 +68,6 @@ class SarsaAgent(AbstractAgent):
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
             distance = beacon_coordinates - marine_coordinates
-            p = random.random()
-            # Pull current best action
 
             # Perform action
             if self.train:
@@ -77,9 +75,6 @@ class SarsaAgent(AbstractAgent):
             else:
                 direction_key = self.qtable.get_best_action()
 
-            if obs.reward == 1:
-                print(self.current_distance)
-                print('sad')
             self.current_distance = distance
             self._LASTDIRECTION = direction_key
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
