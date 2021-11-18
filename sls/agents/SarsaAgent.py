@@ -17,6 +17,7 @@ class SarsaAgent(AbstractAgent):
         self.qtable = SarsaQtable(self.get_directions().keys())
         self._EPSILON = 0.9
         self._TEMPERATURE = 0.5
+        self._LASTDIRECTION = 'N'
         self.train = train
         self.action = 0
         self.current_distance = [0, 0]
@@ -71,27 +72,25 @@ class SarsaAgent(AbstractAgent):
             if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
                 self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
-                                           self._DIRECTIONS[direction_key],
+                                           self._DIRECTIONS[self._LASTDIRECTION],
                                            direction_key, obs.reward, self.current_distance)
             else:
                 if self.train:  # Update Q-table
                     direction_key = self.qtable.get_best_action(distance)
-                    direction_key = self.qtable.update_q_value(
-                        helper.search(self.qtable.DICTIONARY,
-                        self.current_distance),
-                        self._DIRECTIONS[direction_key],
-                        direction_key, obs.reward, self.current_distance
-                    )
+                    self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY,
+                                                             self.current_distance),
+                                               self._DIRECTIONS[self._LASTDIRECTION],
+                                               self._LASTDIRECTION, obs.reward, self.current_distance)
 
                 else:
                     direction_key = self.qtable.get_best_action(distance)
-            direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+            # direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+
             if obs.reward == 1:
                 print(self.current_distance)
                 print('sad')
             self.current_distance = distance
-
-
+            self._LASTDIRECTION = direction_key
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
@@ -102,7 +101,7 @@ class SarsaAgent(AbstractAgent):
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable_211118_SARSA_500.pkl'):
+    def load_model(self, directory, filename='qtable_211118_SARSA_5000.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass
