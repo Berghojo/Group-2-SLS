@@ -28,11 +28,11 @@ class SarsaAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self.train:
-            if self._EPSILON - 1 / 4000 > 0.1:
-                self._EPSILON -= 1 / 4000
+            if self._EPSILON - 1 / 500 > 0.1:
+                self._EPSILON -= 1 / 500
             else:
                 self._EPSILON = 0.1
-            if ep > 4000:
+            if ep > 500:
                 self._EPSILON = 0
         return self._EPSILON
 
@@ -40,7 +40,7 @@ class SarsaAgent(AbstractAgent):
         return self._EPSILON
 
     def boltzmann_select(self, state):
-        i = self.qtable[state]
+        i = self.qtable.qtable.loc[state]
         q_dist = scipy.softmax(i / self._TEMPERATURE)
         action = np.random.choice(self._DIRECTIONS.keys(), p=q_dist)
         return action
@@ -62,7 +62,7 @@ class SarsaAgent(AbstractAgent):
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
                 self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
                                            self._DIRECTIONS[self._LASTDIRECTION],
-                                           direction_key, obs.reward, self.current_distance)
+                                           self._LASTDIRECTION, obs.reward, self.current_distance)
             else:
                 if self.train:  # Update Q-table
                     direction_key = self.qtable.get_best_action(distance)
