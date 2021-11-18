@@ -36,6 +36,16 @@ class SarsaAgent(AbstractAgent):
                 self._EPSILON = 0
         return self._EPSILON
 
+    def temperature_decay(self, ep):
+        if self.train:
+            if self._TEMPERATURE - 1 / 4000 > 0.1:
+                self._TEMPERATURE -= 1 / 4000
+            else:
+                self._TEMPERATURE = 0.1
+            if ep > 4000:
+                self._TEMPERATURE = 0
+        return self._TEMPERATURE
+
     def get_epsilon(self):
         return self._EPSILON
 
@@ -74,6 +84,7 @@ class SarsaAgent(AbstractAgent):
                 else:
                     direction_key = self.qtable.get_best_action(distance)
             # direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+
             if obs.reward == 1:
                 print(self.current_distance)
                 print('sad')
