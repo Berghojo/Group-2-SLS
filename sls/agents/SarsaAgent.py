@@ -35,13 +35,24 @@ class SarsaAgent(AbstractAgent):
                 self._EPSILON = 0
         return self._EPSILON
 
+    def temperature_decay(self, ep):
+        if self.train:
+            if self._TEMPERATURE - 1 / 4000 > 0.1:
+                self._TEMPERATURE -= 1 / 4000
+            else:
+                self._TEMPERATURE = 0.1
+            if ep > 4000:
+                self._TEMPERATURE = 0
+        return self._TEMPERATURE
+
     def get_epsilon(self):
         return self._EPSILON
 
     def boltzmann_select(self, state):
-        i = self.qtable[state]
-        q_dist = scipy.softmax(i / self._TEMPERATURE)
-        action = np.random.choice(self._DIRECTIONS.keys(), p=q_dist)
+        i = self.qtable.qtable.loc[state]
+        q_dist = scipy.special.softmax(i / self._TEMPERATURE)
+        q_dist = list(q_dist)
+        action = np.random.choice(list(self._DIRECTIONS.keys()), p=q_dist)
         return action
 
     def step(self, obs):
@@ -65,14 +76,16 @@ class SarsaAgent(AbstractAgent):
             else:
                 if self.train:  # Update Q-table
                     direction_key = self.qtable.get_best_action(distance)
-                    direction_key = self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY,
-                                                                             self.current_distance),
-                                                               self._DIRECTIONS[direction_key],
-                                                               direction_key, obs.reward, self.current_distance)
+                    direction_key = self.qtable.update_q_value(
+                        helper.search(self.qtable.DICTIONARY,
+                        self.current_distance),
+                        self._DIRECTIONS[direction_key],
+                        direction_key, obs.reward, self.current_distance
+                    )
 
                 else:
                     direction_key = self.qtable.get_best_action(distance)
-            #direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
+            direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance))
             if obs.reward == 1:
                 print(self.current_distance)
                 print('sad')

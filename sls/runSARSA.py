@@ -10,7 +10,7 @@ _CONFIG = dict(
     visualize=True,
     train=False,
     agent=SarsaAgent,
-    load_path='./pickles/'
+    load_path='./Pickles/'
 )
 
 
