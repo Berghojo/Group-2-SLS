@@ -24,7 +24,7 @@ def create_states():
         split_numbers = []
         if len(coordinates) == 0:
             break
-        for i in range(2):      # TODO: Try range 4 and 2
+        for i in range(1):
             split_numbers.append(coordinates.pop(0))
 
         grouped_coordinates.append(split_numbers)
