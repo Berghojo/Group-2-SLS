@@ -39,10 +39,9 @@ def create_states():
             groups.append((index, group))
     groups.append((0, [[0, 0]]))
     for i, state in enumerate(groups):
-        tupel = 2 * (state[0] - 0) / (index - 0) - 1
-        groups[i] = tupel
+        tuple = 2 * (state[0] - 0) / (index - 0) - 1
+        groups[i] = (tuple, groups[i][1])
     states_list = dict(groups)
-    print(states_list)
     return states_list, states_list.keys()
 
 

@@ -23,8 +23,8 @@ class DeepQAgent(AbstractAgent):
         self.action = 0
         self.current_distance = None
         self.experience_replay = ExperienceReplay()
-        self.network = Model(len(self.indexes))
-        self.target_network = Model(len(self.indexes))
+        self.network = Model(1)
+        self.target_network = Model(1)
         self.learning_rate = 0.5
         self.step_count = 0
         if not self.train:
@@ -59,8 +59,8 @@ class DeepQAgent(AbstractAgent):
 
             if self.current_distance is not None:
                 self.experience_replay.append(Experience(helper.search(self.states, self.current_distance),self._LASTDIRECTION,
-                                          obs.reward(),
-                                          obs.reward() == 1,
+                                          obs.reward,
+                                          obs.reward == 1,
                                           helper.search(self.states, distance)))
             # Perform action
             if p < self._EPSILON and self.train:  # Choose random direction
@@ -68,9 +68,12 @@ class DeepQAgent(AbstractAgent):
 
                 # Update Q-table
             else:
-                direction_key = self.network.model.predict(helper.search(self.states, distance)[0])
+                direction_key = self.network.model.predict([helper.search(self.states, distance)])[0]
+                direction_key = list(self._DIRECTIONS.keys())[np.argmax(direction_key)]
+            if self.experience_replay.__len__() > 32 and self.train:
+                if self.experience_replay.__len__() > 32:
+                    print('LEARNING')
 
-            if self.experience_replay.__len__() > 6000 and self.train:
                 exp_replay = self.experience_replay.sample(32)
                 labels = []
                 train_data = []
@@ -79,17 +82,17 @@ class DeepQAgent(AbstractAgent):
                     if exp.done:
                         labels.append(exp.reward)
                     else:
-                        labels.append(exp.reward + self.learning_rate * self.target_network.model.predict()[1])
+                        labels.append(exp.reward + self.learning_rate * np.max(self.target_network.model.predict([exp.new_state])[0]))
 
-
-                EPOCHS = 10
-                checkpoint_path = 'models/'
-                callback = callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, save_best_only=True,
-                                                       save_freq='epoch', verbose=1)
-                self.network.model.summary()
-                self.network.model.fit(train_data, labels, epochs=EPOCHS, callbacks=callback)
-            if self.step_count > 300:
-                self.target_network = self.network
+                #EPOCHS = 10
+                #checkpoint_path = 'models/'
+                #callback = callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, save_best_only=True,
+                #                                      save_freq='epoch', verbose=1)
+                #self.network.model.summary()
+                self.network.model.fit(train_data, labels)
+                if self.step_count > 300:
+                    self.step_count = 0
+                    self.target_network = self.network
 
             self.current_distance = distance
             self._LASTDIRECTION = direction_key
@@ -97,10 +100,8 @@ class DeepQAgent(AbstractAgent):
         else:
             return self._SELECT_ARMY
 
-    def save_model(self, filename):
-        experiment_iteration = 'SARSA_5000'
-        self.qtable.qtable.to_pickle("./pickles/qtable_" + datetime.datetime.now().strftime("%y%m%d_") +
-                                     experiment_iteration + ".pkl")
+    def save_model(self, filename='test'):
+        self.network.save_model()
         pass
 
     def load_model(self, directory, filename='qtable_211118_SARSA_5000.pkl'):

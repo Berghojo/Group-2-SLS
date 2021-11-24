@@ -1,8 +1,6 @@
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer
 from tensorflow.keras.optimizers import RMSprop
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 import numpy as np
 
 
