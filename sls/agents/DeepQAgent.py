@@ -1,9 +1,12 @@
 import os.path
 import scipy
 from sls import helper
+from tensorflow.keras import callbacks
 from sls.agents import AbstractAgent
 import numpy as np
-from sls.SarsaQtable import SarsaQtable
+from sls.expreplay import ExperienceReplay
+from sls.expreplay import Experience
+from sls.Qmodel import Model
 import random
 import datetime
 import os
@@ -14,11 +17,16 @@ class DeepQAgent(AbstractAgent):
 
     def __init__(self, screen_size, train=True):
         super(DeepQAgent, self).__init__(screen_size)
-        self.qtable = SarsaQtable(self.get_directions().keys())
-        self._LASTDIRECTION = 'N'
+        self._LASTDIRECTION = None
+        self.states, self.indexes = helper.create_states()
         self.train = train
         self.action = 0
-        self.current_distance = [0, 0]
+        self.current_distance = None
+        self.experience_replay = ExperienceReplay()
+        self.network = Model(len(self.indexes))
+        self.target_network = Model(len(self.indexes))
+        self.learning_rate = 0.5
+        self.step_count = 0
         if not self.train:
             self._EPSILON = 0
         else:
@@ -38,6 +46,7 @@ class DeepQAgent(AbstractAgent):
         return self._EPSILON
 
     def step(self, obs):
+        self.step_count += 1
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
             marine = self._get_marine(obs)
             if marine is None:
@@ -48,22 +57,39 @@ class DeepQAgent(AbstractAgent):
             distance = beacon_coordinates - marine_coordinates
             p = random.random()
 
+            if self.current_distance is not None:
+                self.experience_replay.append(Experience(helper.search(self.states, self.current_distance),self._LASTDIRECTION,
+                                          obs.reward(),
+                                          obs.reward() == 1,
+                                          helper.search(self.states, distance)))
             # Perform action
             if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
-                self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
-                                           self._DIRECTIONS[self._LASTDIRECTION],
-                                           self._LASTDIRECTION, obs.reward, self.current_distance)
-            else:
-                if self.train:  # Update Q-table
-                    direction_key = self.qtable.get_best_action(distance)
-                    self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY,
-                                                             self.current_distance),
-                                               self._DIRECTIONS[self._LASTDIRECTION],
-                                               self._LASTDIRECTION, obs.reward, self.current_distance)
 
-                else:
-                    direction_key = self.qtable.get_best_action(distance)
+                # Update Q-table
+            else:
+                direction_key = self.network.model.predict(helper.search(self.states, distance)[0])
+
+            if self.experience_replay.__len__() > 6000 and self.train:
+                exp_replay = self.experience_replay.sample(32)
+                labels = []
+                train_data = []
+                for exp in exp_replay:
+                    train_data.append(exp.state)
+                    if exp.done:
+                        labels.append(exp.reward)
+                    else:
+                        labels.append(exp.reward + self.learning_rate * self.target_network.model.predict()[1])
+
+
+                EPOCHS = 10
+                checkpoint_path = 'models/'
+                callback = callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, save_best_only=True,
+                                                       save_freq='epoch', verbose=1)
+                self.network.model.summary()
+                self.network.model.fit(train_data, labels, epochs=EPOCHS, callbacks=callback)
+            if self.step_count > 300:
+                self.target_network = self.network
 
             self.current_distance = distance
             self._LASTDIRECTION = direction_key
