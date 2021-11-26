@@ -10,7 +10,7 @@ _CONFIG = dict(
     visualize=True,
     train=True,
     agent=DeepQAgent,
-    load_path='./pickles/'
+    load_path='./models/'
 )
 
 

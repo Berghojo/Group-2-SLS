@@ -1,30 +1,30 @@
-import os.path
-import scipy
+
 from sls import helper
-from tensorflow.keras import callbacks
 from sls.agents import AbstractAgent
 import numpy as np
 from sls.expreplay import ExperienceReplay
 from sls.expreplay import Experience
 from sls.Qmodel import Model
 import random
-import datetime
-import os
+import tensorflow as tf
 import pandas as pd
 
 
 class DeepQAgent(AbstractAgent):
 
     def __init__(self, screen_size, train=True):
+        tf.compat.v1.disable_eager_execution()
+        tf.autograph.set_verbosity(0)
         super(DeepQAgent, self).__init__(screen_size)
         self._LASTDIRECTION = None
-        self.states, self.indexes = helper.create_states()
+        self.states = helper.create_states()
+        self.verbose = 0
         self.train = train
         self.action = 0
         self.current_distance = None
         self.experience_replay = ExperienceReplay()
-        self.network = Model(1)
-        self.target_network = Model(1)
+        self.network = Model(2, train)
+        self.target_network = Model(2, train)
         self.learning_rate = 0.5
         self.step_count = 0
         if not self.train:
@@ -55,56 +55,51 @@ class DeepQAgent(AbstractAgent):
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
             distance = beacon_coordinates - marine_coordinates
+            distance = np.array([(2 * (distance[0] - - 64) / (64 - -64) ) - 1, (2 * (distance[1] - - 64) / (64 - -64) ) - 1])
             p = random.random()
 
             if self.current_distance is not None:
-                self.experience_replay.append(Experience(helper.search(self.states, self.current_distance),self._LASTDIRECTION,
-                                          obs.reward,
-                                          obs.reward == 1,
-                                          helper.search(self.states, distance)))
+                self.experience_replay.append(Experience(self.current_distance, self._LASTDIRECTION,
+                                                         obs.reward,
+                                                         obs.reward == 1,
+                                                         distance))
             # Perform action
             if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
 
                 # Update Q-table
             else:
-                direction_key = self.network.model.predict([helper.search(self.states, distance)])[0]
+                direction_key = self.network.model.predict(distance.reshape(-1, 2))[0]
                 direction_key = list(self._DIRECTIONS.keys())[np.argmax(direction_key)]
-            if self.experience_replay.__len__() > 32 and self.train:
-                if self.experience_replay.__len__() > 32:
-                    print('LEARNING')
-
+            if self.experience_replay.__len__() > 6000 and self.train:
                 exp_replay = self.experience_replay.sample(32)
-                labels = []
                 train_data = []
                 for exp in exp_replay:
                     train_data.append(exp.state)
+                labels = self.network.model.predict(np.array(np.array(train_data).reshape(-1, 2), dtype=np.float64))
+                for i, exp in enumerate(exp_replay):
                     if exp.done:
-                        labels.append(exp.reward)
+                        labels[i][list(self._DIRECTIONS.keys()).index(exp.action)] = exp.reward
                     else:
-                        labels.append(exp.reward + self.learning_rate * np.max(self.target_network.model.predict([exp.new_state])[0]))
+                        labels[i][list(self._DIRECTIONS.keys()).index(exp.action)] = (exp.reward + self.learning_rate * np.max(self.target_network.model.predict(exp.new_state.reshape(-1, 2))[0]))
+                self.network.model.fit(np.array(train_data, dtype=np.float64).reshape(-1, 2), np.array(labels, dtype=np.float64), verbose=self.verbose)
+                self.verbose = 0
 
-                #EPOCHS = 10
-                #checkpoint_path = 'models/'
-                #callback = callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, save_best_only=True,
-                #                                      save_freq='epoch', verbose=1)
-                #self.network.model.summary()
-                self.network.model.fit(train_data, labels)
-                if self.step_count > 300:
+                if self.step_count > 200:
                     self.step_count = 0
-                    self.target_network = self.network
-
+                    self.target_network.model.set_weights(self.network.model.get_weights())
+                    self.verbose = 1
+                    print('reset')
             self.current_distance = distance
             self._LASTDIRECTION = direction_key
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
-    def save_model(self, filename='test'):
+    def save_model(self, filename='models'):
         self.network.save_model()
         pass
 
-    def load_model(self, directory, filename='qtable_211118_SARSA_5000.pkl'):
-        qtable = pd.read_pickle(directory + filename)
-        self.qtable.qtable = qtable
+    def load_model(self, directory, filename='models'):
+        self.network.load_model()
         pass
