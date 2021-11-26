@@ -26,13 +26,13 @@ class SarsaAgent(AbstractAgent):
         else:
             self._EPSILON = 1
 
-    def epsilon_decay(self, ep):
+    def epsilon_decay(self, ep, max_ep):
         if self.train:
-            if self._EPSILON - 1 / 4000 > 0.1:
-                self._EPSILON -= 1 / 4000
+            if self._EPSILON - 1 / max_ep > 0.1:
+                self._EPSILON -= 1 / max_ep
             else:
                 self._EPSILON = 0.1
-            if ep > 4000:
+            if ep > max_ep:
                 self._EPSILON = 0
         return self._EPSILON
 
@@ -52,7 +52,6 @@ class SarsaAgent(AbstractAgent):
     def boltzmann_select(self, state, obs):
         i = self.qtable.qtable.loc[state]
         q_dist = scipy.special.softmax(i / self._TEMPERATURE)
-        #q_dist = list(q_dist)
         action = np.random.choice(list(self._DIRECTIONS.keys()), p=q_dist)
         self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
                                    self._DIRECTIONS[self._LASTDIRECTION],
@@ -89,7 +88,7 @@ class SarsaAgent(AbstractAgent):
                                      experiment_iteration + ".pkl")
         pass
 
-    def load_model(self, directory, filename='qtable_211118_SARSA_5000.pkl'):
+    def load_model(self, directory, filename='qtable_211126_SARSA_5000.pkl'):
         qtable = pd.read_pickle(directory + filename)
         self.qtable.qtable = qtable
         pass
