@@ -68,6 +68,8 @@ class SarsaAgent(AbstractAgent):
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
             distance = beacon_coordinates - marine_coordinates
+            p = random.random()
+            # Pull current best action
 
             # Perform action
             if self.train:
