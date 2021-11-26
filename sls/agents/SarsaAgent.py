@@ -16,11 +16,12 @@ class SarsaAgent(AbstractAgent):
         super(SarsaAgent, self).__init__(screen_size)
         self.qtable = SarsaQtable(self.get_directions().keys())
         self._EPSILON = 0.9
-        self._TEMPERATURE = 30
-        self._LASTDIRECTION = 'N'
+        self._TEMPERATURE = 20
+        self._MAX_TEMP = self._TEMPERATURE
+        self._LASTDIRECTION = None
         self.train = train
-        self.action = 0
-        self.current_distance = [0, 0]
+        self.action = None
+        self.current_distance = None
         if not self.train:
             self._EPSILON = 0
         else:
@@ -36,26 +37,26 @@ class SarsaAgent(AbstractAgent):
                 self._EPSILON = 0
         return self._EPSILON
 
-    def temperature_decay(self, ep):
+    def temperature_decay(self, ep, max_ep):
         if self.train:
-            if self._TEMPERATURE - 30 / 4000 > 0.1:
-                self._TEMPERATURE -= 30 / 4000
+            if self._TEMPERATURE - self._MAX_TEMP / max_ep > 0.1:
+                self._TEMPERATURE -= self._MAX_TEMP / max_ep
             else:
                 self._TEMPERATURE = 0.1
-            if ep > 4000:
+            if ep > max_ep:
                 self._TEMPERATURE = 0
         return self._TEMPERATURE
 
     def get_epsilon(self):
         return self._EPSILON
 
-    def boltzmann_select(self, state, obs):
+    def boltzmann_select(self, state, obs, distance):
         i = self.qtable.qtable.loc[state]
         q_dist = scipy.special.softmax(i / self._TEMPERATURE)
         action = np.random.choice(list(self._DIRECTIONS.keys()), p=q_dist)
-        self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
-                                   self._DIRECTIONS[self._LASTDIRECTION],
-                                   self._LASTDIRECTION, obs.reward, self.current_distance)
+        if self.current_distance is not None:
+            self.qtable.update_q_value(helper.search(self.qtable.DICTIONARY, self.current_distance),
+                                       self._LASTDIRECTION, obs.reward, self.current_distance, distance)
         return action
 
     def step(self, obs):
@@ -72,7 +73,7 @@ class SarsaAgent(AbstractAgent):
 
             # Perform action
             if self.train:
-                direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance), obs)
+                direction_key = self.boltzmann_select(helper.search(self.qtable.DICTIONARY, distance), obs, distance)
             else:
                 direction_key = self.qtable.get_best_action()
 
