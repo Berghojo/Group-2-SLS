@@ -53,5 +53,5 @@ class Runner:
                 obs = self.env.step(action)
                 self.score += obs.reward
             self.summarize()
-            print(self.agent.epsilon_decay(self.episode))
+            print(self.agent.epsilon_decay(self.episode, episodes))
 
