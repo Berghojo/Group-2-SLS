@@ -23,6 +23,7 @@ class Model:
         model.add(Dense(units=16, activation='relu', input_dim=self.input_dim))
         model.add(Dense(units=32, activation='relu'))
         model.add(Dense(units=8, activation='linear'))
+        model.build((None, 2))
         model.compile(loss='mse', optimizer=RMSprop(learning_rate=0.00025))
         return model
 

@@ -9,7 +9,7 @@ def search(dictionary, value):
 
 def group_into_states(elements_1, elements_2):
 
-    states = [(2 * (elements_1 - - 64) / (64 - -64) ) - 1, (2 * (elements_2 - -64) / (64 - -64) ) - 1]
+    states = [elements_1 / 64, elements_2 / 64]
     return states
 
 
