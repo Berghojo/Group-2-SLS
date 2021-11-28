@@ -38,7 +38,6 @@ class Runner:
                 self.scores_batch.pop(0)
                 self.current_average = average
         if self.train and self.episode % 10 == 0:
-            print(self.h.heap())
             self.agent.save_model(self.path)
             gc.collect()
             try:

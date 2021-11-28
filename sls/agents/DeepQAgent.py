@@ -69,9 +69,8 @@ class DeepQAgent(AbstractAgent):
             if self.train and not self.new_game:
                 self.experience_replay.append(Experience(self.current_distance, self._LASTDIRECTION,
                                                          obs.reward,
-                                                         obs.last or obs.reward == 1,
+                                                         obs.last() or obs.reward == 1,
                                                          distance))
-                print(asizeof.asizeof(self.experience_replay))
             if self.experience_replay.__len__() > self.min_exp_len and self.train:
                 self.train_agent()
             if obs.reward != 1 and not obs.last():
