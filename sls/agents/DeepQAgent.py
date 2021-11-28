@@ -1,4 +1,3 @@
-
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
@@ -17,11 +16,16 @@ class DeepQAgent(AbstractAgent):
         tf.autograph.set_verbosity(0)
         super(DeepQAgent, self).__init__(screen_size)
         self._LASTDIRECTION = None
-        self.states = helper.create_states()
+        self.actions = list(self._DIRECTIONS.keys())
+        self.states = np.array(helper.create_states())
         self.verbose = 0
+        self.update_target_interval = 300
+        self.min_exp_len = 6000
+        self.batch_size = 1024
+        self.next_distance = None
+        self.new_game = True
         self.train = train
-
-        self.action = 0
+        self.action = None
         self.current_distance = None
         self.experience_replay = ExperienceReplay()
         self.network = Model(2, train)
@@ -37,19 +41,16 @@ class DeepQAgent(AbstractAgent):
 
     def epsilon_decay(self, ep):
         if self.train:
-            if self._EPSILON - 1 / 500 > 0.1:
+            if self._EPSILON - 1 / 500 > 0.05:
                 self._EPSILON -= 1 / 500
             else:
-                self._EPSILON = 0.1
-            if ep > 500:
-                self._EPSILON = 0
+                self._EPSILON = 0.05
         return self._EPSILON
 
     def get_epsilon(self):
         return self._EPSILON
 
     def step(self, obs):
-        self.step_count += 1
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
             marine = self._get_marine(obs)
             if marine is None:
@@ -57,64 +58,66 @@ class DeepQAgent(AbstractAgent):
             beacon_object = self._get_beacon(obs)
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
-            distance = np.array(beacon_coordinates - marine_coordinates)
-            distance = distance / 64
-            #distance = np.array([(2 * (distance[0] - - 64) / (64 - -64) ) - 1, (2 * (distance[1] - - 64) / (64 - -64) ) - 1])
-            p = random.random()
 
+            distance = np.array(beacon_coordinates - marine_coordinates)/64
             if self.current_distance is not None and self.train and not self.new_game:
                 self.experience_replay.append(Experience(self.current_distance, self._LASTDIRECTION,
                                                          obs.reward,
-                                                         obs.reward == 1 or obs.last(),
+                                                         obs.last or obs.reward == 1,
                                                          distance))
             # Perform action
-            if p < self._EPSILON and self.train:  # Choose random direction
-                direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
-
-            # Update Experience Replay
+            if random.random() < self._EPSILON and self.train:  # Choose random direction
+                direction_key = np.random.choice(self.actions)
+                # Update Q-table
             else:
-                direction_key = self.network.model.predict(distance.reshape(-1, 2))[0]
-                direction_key = list(self._DIRECTIONS.keys())[np.argmax(direction_key)]
-            if self.experience_replay.__len__() > 6000 and self.train:
-                exp_replay = self.experience_replay.sample(32)
-                train_data = [exp.state for exp in exp_replay]
-                train_data = np.array(np.array(train_data).reshape(-1, 2), dtype=np.float64)
-                labels = self.network.model.predict(train_data)
+                q_values = self.network.model.predict(distance.reshape(1, 2))
+                direction_key = self.actions[np.argmax(q_values)]
 
-                for i, exp in enumerate(exp_replay):
-                    if exp.done:
-                        labels[i][list(self._DIRECTIONS.keys()).index(exp.action)] = exp.reward
-                    else:
-                        labels[i][list(self._DIRECTIONS.keys()).index(exp.action)] = (exp.reward + self.learning_rate * np.max(self.target_network.model.predict(exp.new_state.reshape(-1, 2))[0]))
-                self.network.model.fit(np.array(train_data, dtype=np.float64).reshape(-1, 2), np.array(labels, dtype=np.float64), verbose=self.verbose)
-                self.verbose = 0
-
-                self.train_check()
-
-            if not obs.last() and obs.reward != 1:
-                self.new_game = False
+            if self.experience_replay.__len__() > self.min_exp_len and self.train:
+                self.train_agent()
+            if obs.reward != 1 and not obs.last():
                 self.current_distance = distance
                 self._LASTDIRECTION = direction_key
+                self.new_game = False
             else:
-                self.new_game = True
-                self.last_state = -1
                 self._LASTDIRECTION = 'NO_OP'
+                self.current_distance = None
+                self.new_game = True
 
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
-    def train_check(self):
-        if self.step_count > 200:
-            self.step_count = 0
+
+    def train_agent(self):
+        exp_replay = self.experience_replay.sample(self.batch_size)
+        states = [exp.state for exp in exp_replay]
+        new_states = [exp.new_state for exp in exp_replay]
+        states = np.array(states, dtype=np.float64).reshape(self.batch_size, 2)
+        new_states = np.array(new_states,
+                              dtype=np.float64) .reshape(self.batch_size, 2)# TODO transformation in external function
+        y = self.network.model.predict(states)
+        y_new = self.target_network.model.predict(new_states)
+        for i, exp in enumerate(exp_replay):
+            if exp.done:
+                y[i][self.actions.index(
+                    exp.action)] = exp.reward  # TODO save action as numeric value instead of char
+            else:
+                y[i][self.actions.index(exp.action)] = (
+                        exp.reward + self.learning_rate * max(y_new[i]))
+        self.network.model.fit(states, np.array(y), verbose=self.verbose)
+        self.verbose = 0
+
+    def update_steps(self):
+        if self.step_count > self.update_target_interval:
             self.target_network.model.set_weights(self.network.model.get_weights())
             self.verbose = 1
-            print('reset')
+            self.step_count = 0
+        else:
+            self.step_count += 1
 
     def save_model(self, filename='models'):
-        self.network.save_model()
-        pass
+        self.network.model.save_weights('./models/my_model_weights3.h5')
 
     def load_model(self, directory, filename='models'):
-        self.network.load_model()
-        pass
+        self.network.model.load_weights('./models/my_model_weights3.h5')
