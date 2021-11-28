@@ -1,5 +1,5 @@
 import sys
-
+from pympler import asizeof
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
@@ -71,6 +71,7 @@ class DeepQAgent(AbstractAgent):
                                                          obs.reward,
                                                          obs.last or obs.reward == 1,
                                                          distance))
+                print(asizeof.asizeof(self.experience_replay))
             if self.experience_replay.__len__() > self.min_exp_len and self.train:
                 self.train_agent()
             if obs.reward != 1 and not obs.last():

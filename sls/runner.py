@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from guppy import hpy
+import tracemalloc
 
 class Runner:
     def __init__(self, agent, env, train, load_path):
