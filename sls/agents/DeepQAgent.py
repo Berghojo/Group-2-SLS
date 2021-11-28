@@ -20,6 +20,7 @@ class DeepQAgent(AbstractAgent):
         self.states = helper.create_states()
         self.verbose = 0
         self.train = train
+
         self.action = 0
         self.current_distance = None
         self.experience_replay = ExperienceReplay()
@@ -27,6 +28,8 @@ class DeepQAgent(AbstractAgent):
         self.target_network = Model(2, train)
         self.learning_rate = 0.5
         self.step_count = 0
+        self.new_game = True
+
         if not self.train:
             self._EPSILON = 0
         else:
@@ -54,29 +57,30 @@ class DeepQAgent(AbstractAgent):
             beacon_object = self._get_beacon(obs)
             beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
-            distance = beacon_coordinates - marine_coordinates
-            distance = np.array([(2 * (distance[0] - - 64) / (64 - -64) ) - 1, (2 * (distance[1] - - 64) / (64 - -64) ) - 1])
+            distance = np.array(beacon_coordinates - marine_coordinates)
+            distance = distance / 64
+            #distance = np.array([(2 * (distance[0] - - 64) / (64 - -64) ) - 1, (2 * (distance[1] - - 64) / (64 - -64) ) - 1])
             p = random.random()
 
-            if self.current_distance is not None:
+            if self.current_distance is not None and self.train and not self.new_game:
                 self.experience_replay.append(Experience(self.current_distance, self._LASTDIRECTION,
                                                          obs.reward,
-                                                         obs.reward == 1,
+                                                         obs.reward == 1 or obs.last(),
                                                          distance))
             # Perform action
             if p < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(list(self._DIRECTIONS.keys()))
 
-                # Update Q-table
+            # Update Experience Replay
             else:
                 direction_key = self.network.model.predict(distance.reshape(-1, 2))[0]
                 direction_key = list(self._DIRECTIONS.keys())[np.argmax(direction_key)]
             if self.experience_replay.__len__() > 6000 and self.train:
                 exp_replay = self.experience_replay.sample(32)
-                train_data = []
-                for exp in exp_replay:
-                    train_data.append(exp.state)
-                labels = self.network.model.predict(np.array(np.array(train_data).reshape(-1, 2), dtype=np.float64))
+                train_data = [exp.state for exp in exp_replay]
+                train_data = np.array(np.array(train_data).reshape(-1, 2), dtype=np.float64)
+                labels = self.network.model.predict(train_data)
+
                 for i, exp in enumerate(exp_replay):
                     if exp.done:
                         labels[i][list(self._DIRECTIONS.keys()).index(exp.action)] = exp.reward
@@ -85,16 +89,27 @@ class DeepQAgent(AbstractAgent):
                 self.network.model.fit(np.array(train_data, dtype=np.float64).reshape(-1, 2), np.array(labels, dtype=np.float64), verbose=self.verbose)
                 self.verbose = 0
 
-                if self.step_count > 200:
-                    self.step_count = 0
-                    self.target_network.model.set_weights(self.network.model.get_weights())
-                    self.verbose = 1
-                    print('reset')
-            self.current_distance = distance
-            self._LASTDIRECTION = direction_key
+                self.train_check()
+
+            if not obs.last() and obs.reward != 1:
+                self.new_game = False
+                self.current_distance = distance
+                self._LASTDIRECTION = direction_key
+            else:
+                self.new_game = True
+                self.last_state = -1
+                self._LASTDIRECTION = 'NO_OP'
+
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
+
+    def train_check(self):
+        if self.step_count > 200:
+            self.step_count = 0
+            self.target_network.model.set_weights(self.network.model.get_weights())
+            self.verbose = 1
+            print('reset')
 
     def save_model(self, filename='models'):
         self.network.save_model()
