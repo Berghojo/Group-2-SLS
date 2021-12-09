@@ -10,16 +10,16 @@ import tensorflow as tf
 import pandas as pd
 
 
-class DeepQAgent(AbstractAgent):
+class DDeepQAgent(AbstractAgent):
 
     def __init__(self, screen_size, train=True):
         tf.compat.v1.disable_eager_execution()
-        super(DeepQAgent, self).__init__(screen_size)
+        super(DDeepQAgent, self).__init__(screen_size)
         self.save = './models/my_model_weights_final.h5'
         self.actions = list(self._DIRECTIONS.keys())
         self.verbose = 0
         self.update_target_interval = 300
-        self.min_exp_len = 6000
+        self.min_exp_len = 32
         self.batch_size = 32
         self.next_distance = None
         self.new_game = True
@@ -98,8 +98,9 @@ class DeepQAgent(AbstractAgent):
                     exp.action)] = exp.reward
             else:
                 y[i][self.actions.index(exp.action)] = (
-                        exp.reward + self.learning_rate * y[i][np.argmax(y_new[i])]) # max(y_new[i])
+                        exp.reward + self.learning_rate * y_new[i][np.argmax(y[i])]) # max(y_new[i])
         self.network.model.fit(states, y, verbose=self.verbose)
+
         self.verbose = 0
 
     def update_steps(self):

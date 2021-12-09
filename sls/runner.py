@@ -3,14 +3,13 @@ import gc
 import os
 import tensorflow as tf
 import numpy as np
-from guppy import hpy
+
 import tracemalloc
 
 class Runner:
     def __init__(self, agent, env, train, load_path):
 
         self.agent = agent
-        self.h = hpy()
         self.env = env
         self.train = train  # run only or train_model model?
         self.scores_batch = []

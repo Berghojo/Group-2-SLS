@@ -10,11 +10,11 @@ import tensorflow as tf
 import pandas as pd
 
 
-class DeepQAgent(AbstractAgent):
+class DuelingDeepQAgent(AbstractAgent):
 
     def __init__(self, screen_size, train=True):
         tf.compat.v1.disable_eager_execution()
-        super(DeepQAgent, self).__init__(screen_size)
+        super(DuelingDeepQAgent, self).__init__(screen_size)
         self.save = './models/my_model_weights_final.h5'
         self.actions = list(self._DIRECTIONS.keys())
         self.verbose = 0
@@ -24,7 +24,7 @@ class DeepQAgent(AbstractAgent):
         self.next_distance = None
         self.new_game = True
         self.train = train
-        self.network = Model(2, train)
+        self.network = Model(2, train, is_duel=True)
         self.learning_rate = 0.9
         self.step_count = 0
         self.experience_replay = ExperienceReplay()
@@ -35,7 +35,7 @@ class DeepQAgent(AbstractAgent):
             self._EPSILON = 0
         else:
             self._EPSILON = 1
-            self.target_network = Model(2, train)
+            self.target_network = Model(2, train, is_duel=True)
 
     def epsilon_decay(self, ep):
         if self.train:
@@ -91,6 +91,7 @@ class DeepQAgent(AbstractAgent):
         new_states = np.array([exp.new_state for exp in exp_replay],
                               dtype=np.float64)
         y = self.network.model.predict(states)
+
         y_new = self.target_network.model.predict(new_states)
         for i, exp in enumerate(exp_replay):
             if exp.done:
