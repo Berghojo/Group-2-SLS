@@ -4,3 +4,4 @@ from .SarsaAgent import SarsaAgent
 from .DeepQAgent import DeepQAgent
 from .DDeepQAgent import DDeepQAgent
 from .DuelingDeepQAgent import DuelingDeepQAgent
+from .CNNAgent import CNNAgent
