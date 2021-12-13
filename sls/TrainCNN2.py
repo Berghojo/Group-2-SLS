@@ -9,7 +9,7 @@ _CONFIG = dict(
     minimap_size=64,
     visualize=False,
     train=True,
-    agent=CNNAgent,
+    agent=CNNAgent2,
     load_path='./models/'
 )
 
