@@ -41,7 +41,7 @@ class CNNAgent2(AbstractAgent):
             self._EPSILON = 0
         else:
             self._EPSILON = 1
-            self.target_network = Model(2, train, is_conv=True)
+            self.target_network = Model(2, train, is_conv_2=True)
 
     def epsilon_decay(self, ep):
         if self.train:
@@ -59,7 +59,6 @@ class CNNAgent2(AbstractAgent):
         marine = self._get_marine(obs)
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
             state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
-            print(state)
             state = np.array(state)
             marine_coordinates = self._get_unit_pos(marine)
             if random.random() < self._EPSILON and self.train:  # Choose random direction
@@ -70,7 +69,7 @@ class CNNAgent2(AbstractAgent):
                 direction_key = self.actions[np.argmax(q_values)]
 
             if self.train and not self.new_game:
-                self.experience_replay.append(Experience(self.current_distance, self._LASTDIRECTION,
+                self.experience_replay.append(Experience(self.current_state, self._LASTDIRECTION,
                                                          obs.reward,
                                                          obs.last() or obs.reward == 1,
                                                          state))
