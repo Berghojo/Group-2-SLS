@@ -5,3 +5,4 @@ from .DeepQAgent import DeepQAgent
 from .DDeepQAgent import DDeepQAgent
 from .DuelingDeepQAgent import DuelingDeepQAgent
 from .CNNAgent import CNNAgent
+from .CNNAgent2 import CNNAgent2
