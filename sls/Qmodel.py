@@ -23,16 +23,18 @@ class Model:
         v = input[:,0]  # shape 32
         v = tf.reshape(v, [-1, 1])
         a = input[:,1:] # shape 32,8
-        a_mean = K.mean(a, axis=1)
+        a_mean = tf.math.reduce_mean(a, axis=1)
         a_mean = tf.reshape(a_mean, [-1, 1])
         Q = v + (a - a_mean)
         return Q
 
     def create_convolutional_model(self):
         model = Sequential()
-        model.add(Conv2D(filters=16, kernel_size=5, activation='relu', strides=1, input_shape=(16, 16, 1), padding='same',
+        model.add(Conv2D(filters=16, kernel_size=5, activation='relu', strides=1, input_shape=(16, 16, 1),
+                         padding='same',
                          kernel_initializer='he_normal'))
-        model.add(Conv2D(filters=32, kernel_size=3, activation='relu', strides=1, padding='same', kernel_initializer='he_normal'))
+        model.add(Conv2D(filters=32, kernel_size=3, activation='relu', strides=1, padding='same',
+                         kernel_initializer='he_normal'))
         model.add(Flatten())
         model.add(Dense(64, activation='relu', kernel_initializer='he_normal'))
         model.add(Dense(9, activation='linear', kernel_initializer='he_normal'))

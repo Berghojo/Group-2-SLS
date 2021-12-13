@@ -6,8 +6,8 @@ from sls.agents.QAgent import QAgent
 _CONFIG = dict(
     episodes=600,
     screen_size=16,
-    minimap_size=16,
-    visualize=64,
+    minimap_size=64,
+    visualize=False,
     train=True,
     agent=DDeepQAgent,
     load_path='./models/'
