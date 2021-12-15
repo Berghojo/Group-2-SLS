@@ -36,7 +36,7 @@ class CNNAgent2(AbstractAgent):
         self.beta = 0.6
         self.beta_inc = Decimal(5e-6)
         self.epsilon_replay = Decimal(1e-6)
-        self.experience_replay = ExperienceReplay()
+        self.experience_replay = PrioritizedReplayBuffer(100_000, self.alpha)
         if not self.train:
             self._EPSILON = 0
         else:
@@ -61,6 +61,7 @@ class CNNAgent2(AbstractAgent):
             state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
             state = np.array(state)
             marine_coordinates = self._get_unit_pos(marine)
+
             if random.random() < self._EPSILON and self.train:  # Choose random direction
                 direction_key = np.random.choice(self.actions)
                 # Update Q-table
@@ -69,10 +70,10 @@ class CNNAgent2(AbstractAgent):
                 direction_key = self.actions[np.argmax(q_values)]
 
             if self.train and not self.new_game:
-                self.experience_replay.append(Experience(self.current_state, self._LASTDIRECTION,
-                                                         obs.reward,
-                                                         obs.last() or obs.reward == 1,
-                                                         state))
+                self.experience_replay.add(self.current_state, self._LASTDIRECTION,
+                                           obs.reward,
+                                           state,
+                                           obs.last() or obs.reward == 1)
             if self.experience_replay.__len__() > self.min_exp_len and self.train:
                 self.train_agent()
             if obs.reward != 1 and not obs.last():
@@ -84,27 +85,48 @@ class CNNAgent2(AbstractAgent):
                 self.current_state = None
                 self.new_game = True
 
+            if self.beta < 1: # increase beta every step
+                self.beta = self.beta + float(self.beta_inc)
+            else:
+                self.beta = 1
+
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
     def train_agent(self):
-        exp_replay = self.experience_replay.sample(self.batch_size)
-        states = np.array([exp.state for exp in exp_replay], dtype=np.float64)
-        new_states = np.array([exp.new_state for exp in exp_replay],
-                              dtype=np.float64)
+        # Sample a batch of experiences
+        exp_replay = self.experience_replay.sample(self.batch_size, self.beta)
+        states, actions, rewards, new_states, dones, weights, batch_idxes = exp_replay
+
+        # Make prediction from current state and new_state (target and source network)
         y = self.network.model.predict(states)
         y_next = self.network.model.predict(new_states)
         y_new = self.target_network.model.predict(new_states)
-        for i, exp in enumerate(exp_replay):
-            if exp.done:
-                y[i][self.actions.index(
-                    exp.action)] = exp.reward
-            else:
-                y[i][self.actions.index(exp.action)] = (
-                        exp.reward + self.learning_rate * y_new[i][np.argmax(y_next[i])]) #y_new[i][np.argmax(y[i])])  # max(y_new[i])
-        self.network.model.fit(states, y, verbose=self.verbose)
 
+        taken_actions = []
+
+        # Reward for new predicted state (y)
+        for state in range(self.batch_size):
+            if dones[state]:
+                y[state][self.actions.index(actions[state])] = rewards[state]
+            else:  # Bellman equation (update reward)
+                y[state][self.actions.index(actions[state])] = (
+                        rewards[state] + self.learning_rate * y_new[state][np.argmax(y_next[state])])  # y_new[i][np.argmax(y[i])])  # max(y_new[i])
+            taken_actions.append(self.actions.index(actions[state]))
+
+        self.network.model.fit(states, y, verbose=self.verbose)
+        priority_list = []
+
+        Q = self.network.model.predict(states)  # Updated Q-values
+        T = y  # Q-values for old Q-table
+
+        for state, action in enumerate(taken_actions):  # Error -> Priority
+            error = np.abs(Q[state][action] - T[state][action])
+            priority = error + self.epsilon_replay
+            priority_list.append(priority)
+
+        self.experience_replay.update_priorities(batch_idxes, priority_list)
         self.verbose = 0
 
     def update_steps(self):

@@ -83,15 +83,16 @@ class CNNAgent(AbstractAgent):
                 self.current_state = None
                 self.new_game = True
 
+            if self.beta < 1: # increase beta every step
+                self.beta = self.beta + float(self.beta_inc)
+            else:
+                self.beta = 1
+
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
     def train_agent(self):
-        if self.beta < 1:
-            self.beta = self.beta + float(self.beta_inc)
-        else:
-            self.beta = 1
         experience = self.experience_replay.sample(self.batch_size, self.beta)
         states, actions, rewards, next_states, dones, weights, batch_idxes = experience
         target = self.network.model.predict(states.reshape([-1, 16, 16, 1]))
