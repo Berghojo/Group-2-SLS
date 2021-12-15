@@ -25,7 +25,7 @@ class CNNAgent2(AbstractAgent):
         self.next_distance = None
         self.new_game = True
         self.train = train
-        self.network = Model(2, train, is_conv_2=True)
+        self.network = Model(2, train, is_conv=True)
         self.learning_rate = 0.9
         self.step_count = 0
         self.experience_replay_size = 100_000
@@ -41,7 +41,7 @@ class CNNAgent2(AbstractAgent):
             self._EPSILON = 0
         else:
             self._EPSILON = 1
-            self.target_network = Model(2, train, is_conv_2=True)
+            self.target_network = Model(2, train, is_conv=True)
 
     def epsilon_decay(self, ep):
         if self.train:
@@ -94,6 +94,7 @@ class CNNAgent2(AbstractAgent):
         new_states = np.array([exp.new_state for exp in exp_replay],
                               dtype=np.float64)
         y = self.network.model.predict(states)
+        y_next = self.network.model.predict(new_states)
         y_new = self.target_network.model.predict(new_states)
         for i, exp in enumerate(exp_replay):
             if exp.done:
@@ -101,7 +102,7 @@ class CNNAgent2(AbstractAgent):
                     exp.action)] = exp.reward
             else:
                 y[i][self.actions.index(exp.action)] = (
-                        exp.reward + self.learning_rate * max(y_new[i]))  # max(y_new[i])
+                        exp.reward + self.learning_rate * y_new[i][np.argmax(y_next[i])]) #y_new[i][np.argmax(y[i])])  # max(y_new[i])
         self.network.model.fit(states, y, verbose=self.verbose)
 
         self.verbose = 0

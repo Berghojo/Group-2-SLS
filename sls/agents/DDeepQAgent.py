@@ -91,14 +91,15 @@ class DDeepQAgent(AbstractAgent):
         new_states = np.array([exp.new_state for exp in exp_replay],
                               dtype=np.float64)
         y = self.network.model.predict(states)
-        y_new = self.target_network.model.predict(new_states)
+        y_next = self.network.model.predict(new_states)
+        y_target = self.target_network.model.predict(new_states)
         for i, exp in enumerate(exp_replay):
             if exp.done:
                 y[i][self.actions.index(
                     exp.action)] = exp.reward
             else:
                 y[i][self.actions.index(exp.action)] = (
-                        exp.reward + self.learning_rate * y_new[i][np.argmax(y[i])]) # max(y_new[i])
+                        exp.reward + self.learning_rate * y_target[i][np.argmax(y_next[i])]) # max(y_target[i])
         self.network.model.fit(states, y, verbose=self.verbose)
 
         self.verbose = 0

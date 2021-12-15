@@ -94,21 +94,21 @@ class CNNAgent(AbstractAgent):
             self.beta = 1
         experience = self.experience_replay.sample(self.batch_size, self.beta)
         states, actions, rewards, next_states, dones, weights, batch_idxes = experience
-        y = self.network.model.predict(states.reshape([-1, 16, 16, 1]))
-        q_table = self.network.model.predict(states.reshape([-1, 16, 16, 1]))
-
-        y_new = self.target_network.model.predict(states.reshape([-1, 16, 16, 1]))
+        target = self.network.model.predict(states.reshape([-1, 16, 16, 1]))
+        target_next = self.network.model.predict(next_states.reshape([-1, 16, 16, 1]))
+        q_table = target
+        y_new = self.target_network.model.predict(next_states.reshape([-1, 16, 16, 1]))
         for i, exp in enumerate(states):
             if dones[i]:
-                y[i][self.actions.index(
+                target[i][self.actions.index(
                     actions[i])] = rewards[i]
             else:
-                y[i][self.actions.index(
+                target[i][self.actions.index(
                     actions[i])] = (
-                        rewards[i] + self.learning_rate * y_new[i][np.argmax(y[i])])  # max(y_new[i])
-        self.network.model.fit(states, y, verbose=self.verbose)
+                        rewards[i] + self.learning_rate * y_new[i][np.argmax(target_next[i])])  # max(y_new[i])
+        self.network.model.fit(states, target, verbose=self.verbose)
 
-        delta = abs(np.sum(q_table - y, axis=1))
+        delta = abs(np.sum(q_table - target, axis=1))
         delta = (delta + float(self.epsilon_replay))
         self.experience_replay.update_priorities(batch_idxes, delta)
         self.verbose = 0
