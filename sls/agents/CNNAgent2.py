@@ -123,7 +123,7 @@ class CNNAgent2(AbstractAgent):
 
         for state, action in enumerate(taken_actions):  # Error -> Priority
             error = np.abs(Q[state][action] - T[state][action])
-            priority = error + self.epsilon_replay
+            priority = error + float(self.epsilon_replay)
             priority_list.append(priority)
 
         self.experience_replay.update_priorities(batch_idxes, priority_list)

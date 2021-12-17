@@ -4,9 +4,9 @@ from sls.agents import *
 from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
-    episodes=600,
+    episodes=2000,
     screen_size=16,
-    minimap_size=64,
+    minimap_size=16,
     visualize=False,
     train=True,
     agent=CNNAgent2,
