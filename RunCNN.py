@@ -7,8 +7,8 @@ _CONFIG = dict(
     episodes=2000,
     screen_size=16,
     minimap_size=16,
-    visualize=False,
-    train=True,
+    visualize=True,
+    train=False,
     agent=CNNAgent2,
     load_path='./models/'
 )

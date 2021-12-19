@@ -4,12 +4,12 @@ from sls.agents import *
 from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
-    episodes=2000,
+    episodes=600,
     screen_size=16,
-    minimap_size=16,
-    visualize=False,
-    train=True,
-    agent=CNNAgent2,
+    minimap_size=64,
+    visualize=True,
+    train=False,
+    agent=DDeepQAgent,
     load_path='./models/'
 )
 
