@@ -1,19 +1,22 @@
 import datetime
+import gc
 import os
 import tensorflow as tf
 import numpy as np
-
+from guppy import hpy
+import tracemalloc
 
 class Runner:
     def __init__(self, agent, env, train, load_path):
 
         self.agent = agent
+        self.h = hpy()
         self.env = env
         self.train = train  # run only or train_model model?
         self.scores_batch = []
         self.score = 0  # store for the scores of an episode
         self.episode = 1  # episode counter
-
+        self.current_average = 0
         self.path = './graphs/' + datetime.datetime.now().strftime("%y%m%d_%H%M") \
                     + ('_train_' if self.train else 'run_') \
                     + type(agent).__name__
@@ -33,9 +36,10 @@ class Runner:
                 average = np.mean(self.scores_batch)
                 tf.summary.scalar('Moving Average Score (50) per Episode', average, step=self.episode - 50)
                 self.scores_batch.pop(0)
-
+                self.current_average = average
         if self.train and self.episode % 10 == 0:
             self.agent.save_model(self.path)
+            gc.collect()
             try:
                 self.agent.update_target_model()
             except AttributeError:
@@ -52,6 +56,7 @@ class Runner:
                     break
                 obs = self.env.step(action)
                 self.score += obs.reward
+                self.agent.update_steps()
             self.summarize()
-            print(self.agent.epsilon_decay(self.episode))
+            print(self.agent.epsilon_decay(self.episode), self.current_average)
 

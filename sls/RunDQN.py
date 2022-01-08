@@ -4,12 +4,12 @@ from sls.agents import *
 from sls.agents.QAgent import QAgent
 
 _CONFIG = dict(
-    episodes=100,
+    episodes=500,
     screen_size=64,
     minimap_size=64,
     visualize=True,
     train=False,
-    agent=QAgent,
+    agent=DeepQAgent,
     load_path='./pickles/'
 )
 

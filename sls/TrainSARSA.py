@@ -1,15 +1,15 @@
 from absl import app
 from sls import Env, Runner
 from sls.agents import *
-from sls.agents.QAgent import QAgent
+
 
 _CONFIG = dict(
-    episodes=100,
+    episodes=500,
     screen_size=64,
     minimap_size=64,
     visualize=True,
-    train=False,
-    agent=QAgent,
+    train=True,
+    agent=SarsaAgent,
     load_path='./pickles/'
 )
 
@@ -38,4 +38,5 @@ def main(unused_argv):
 
 
 if __name__ == "__main__":
+    print(_CONFIG['agent'])
     app.run(main)
