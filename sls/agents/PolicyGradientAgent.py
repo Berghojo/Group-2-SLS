@@ -13,6 +13,7 @@ import pandas as pd
 
 SAR = namedtuple("SAR", ["state", "action", "reward"])
 
+
 class PolicyAgent(AbstractAgent):
     def __init__(self, screen_size, train=True):
         tf.compat.v1.disable_eager_execution()
@@ -31,7 +32,7 @@ class PolicyAgent(AbstractAgent):
         self.train = train
         self.network = Model(2, train)
         self.gamma = 0.99
-        #self.gamma = 0.00025
+        # self.gamma = 0.00025
         self.step_count = 0
         self.new_episode = False
         self.sar_batch = []
@@ -67,8 +68,8 @@ class PolicyAgent(AbstractAgent):
                 actions = []
                 for t, sar in enumerate(self.sar_batch):
                     reward = 0
-                    for i in range(len(self.sar_batch)-t):
-                        reward = reward + self.gamma**i * self.sar_batch[i+t].reward
+                    for i in range(len(self.sar_batch) - t):
+                        reward = reward + self.gamma ** i * self.sar_batch[i + t].reward
 
                     reward_sum.append([reward, self.actions.index(sar.action)])
                     train_states.append(sar.state)

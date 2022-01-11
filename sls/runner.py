@@ -29,7 +29,7 @@ class Runner:
 
     def summarize(self):
         with self.writer.as_default():
-            tf.summary.scalar('Epsilon per Episode', self.agent.get_epsilon(), step=self.episode)
+            # tf.summary.scalar('Epsilon per Episode', self.agent.get_epsilon(), step=self.episode)
             tf.summary.scalar('Score per Episode', self.score, step=self.episode)
             self.scores_batch.append(self.score)
             if len(self.scores_batch) == 50:
