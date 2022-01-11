@@ -75,6 +75,7 @@ class PolicyAgent(AbstractAgent):
                     train_states.append(sar.state)
                 train_states = np.array(train_states)
                 reward_sum = np.array(reward_sum)
+                self.network.model.step_size = len(reward_sum)
                 self.network.model.fit(train_states, reward_sum)
                 self.new_episode = False
                 self.current_distance = None

@@ -13,6 +13,7 @@ class Model:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
         self.input_dim = input_dim
+        self.step_size = 0
         if train:
             self.model = self.create_model()
         else:
@@ -25,8 +26,10 @@ class Model:
         policy_action = tf.gather_nd(policy, positions)
         log_policy = tf.math.negative(tf.math.log(policy_action))
         # G = tf.math.negative(G)
+
         error_t = log_policy * G
-        error = tf.math.reduce_mean(error_t)
+        error_sum = tf.math.sum(error_t)
+        error = error_sum / tf.constant(self.step_size)
         return error
 
     def create_model(self):
