@@ -39,11 +39,6 @@ class Runner:
                 self.current_average = average
         if self.train and self.episode % 10 == 0:
             self.agent.save_model(self.path)
-            gc.collect()
-            try:
-                self.agent.update_target_model()
-            except AttributeError:
-                ...
         self.episode += 1
         self.agent.new_episode = True
         self.score = 0

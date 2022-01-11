@@ -52,8 +52,11 @@ class Model:
 
 
 
+
     def save_model(self):
         self.model.save('models')
+
+
 
 
 
