@@ -7,14 +7,12 @@ import numpy as np
 import sys
 
 
-
-
-
-
 class Model:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
         self.input_dim = input_dim
+        self.learning_rate = 0.00025
+        self.loss = self.error
         self.step_size = 1
         if train:
             self.model = self.create_model()

@@ -1,5 +1,5 @@
 import sys
-from pympler import asizeof
+
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
