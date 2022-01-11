@@ -13,7 +13,7 @@ class Model:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
         self.input_dim = input_dim
-        self.step_size = 0
+        self.step_size = 1
         if train:
             self.model = self.create_model()
         else:
