@@ -9,6 +9,8 @@ import sys
 
 
 
+
+
 class Model:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
@@ -28,8 +30,8 @@ class Model:
         # G = tf.math.negative(G)
 
         error_t = log_policy * G
-        error_sum = tf.math.sum(error_t)
-        error = error_sum / tf.constant(self.step_size)
+        error_sum = tf.math.reduce_sum(error_t)
+        error = error_sum / tf.cast(tf.size(G), tf.float32)
         return error
 
     def create_model(self):
@@ -49,7 +51,10 @@ class Model:
         return model
 
 
+
     def save_model(self):
         self.model.save('models')
+
+
 
 

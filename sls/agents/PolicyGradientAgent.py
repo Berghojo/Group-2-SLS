@@ -40,21 +40,6 @@ class PolicyAgent(AbstractAgent):
         self.new_game = True
         self.current_distance = None
         self.current_action = None
-        if not self.train:
-            self._EPSILON = 0
-        else:
-            self._EPSILON = 1
-
-    def epsilon_decay(self, ep):
-        if self.train:
-            if self._EPSILON - 1 / 500 > 0.05:
-                self._EPSILON -= 1 / 500
-            else:
-                self._EPSILON = 0.05
-        return self._EPSILON
-
-    def get_epsilon(self):
-        return self._EPSILON
 
     def step(self, obs):
         self.step_count += 1
@@ -65,7 +50,6 @@ class PolicyAgent(AbstractAgent):
             if obs.last() or reward > 0:
                 reward_sum = []
                 train_states = []
-                actions = []
                 for t, sar in enumerate(self.sar_batch):
                     reward = 0
                     for i in range(len(self.sar_batch) - t):
@@ -75,8 +59,7 @@ class PolicyAgent(AbstractAgent):
                     train_states.append(sar.state)
                 train_states = np.array(train_states)
                 reward_sum = np.array(reward_sum)
-                self.network.model.step_size = len(reward_sum)
-                self.network.model.fit(train_states, reward_sum)
+                self.network.model.fit(train_states, reward_sum, batch_size=len(reward_sum))
                 self.new_episode = False
                 self.current_distance = None
                 self.sar_batch = []
