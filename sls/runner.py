@@ -45,6 +45,7 @@ class Runner:
             except AttributeError:
                 ...
         self.episode += 1
+        self.agent.new_episode = True
         self.score = 0
 
     def run(self, episodes):
@@ -56,7 +57,6 @@ class Runner:
                     break
                 obs = self.env.step(action)
                 self.score += obs.reward
-                self.agent.update_steps()
             self.summarize()
-            print(self.agent.epsilon_decay(self.episode), self.current_average)
+            print(f'average: {self.current_average}')
 

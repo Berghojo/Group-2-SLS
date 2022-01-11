@@ -18,14 +18,27 @@ class Model:
         else:
             self.model = self.load_model()
 
+    def error(self, action_G, policy):
+        G, action_index = action_G[:, 0], tf.cast(action_G[:, 1], tf.int32)
+        idx = tf.range(0, tf.size(action_index))
+        positions = tf.stack([idx, action_index], axis=1)
+        policy_action = tf.gather_nd(policy, positions)
+        log_policy = tf.math.negative(tf.math.log(policy_action))
+        # G = tf.math.negative(G)
+        error_t = log_policy * G
+        error = tf.math.reduce_mean(error_t)
+        return error
+
     def create_model(self):
         model = Sequential()
-        model.add(Dense(units=16, activation='relu', input_dim=self.input_dim))
-        model.add(Dense(units=32, activation='relu'))
-        model.add(Dense(units=8, activation='linear'))
-        model.build((None, 2))
-        model.compile(loss='mse', optimizer=RMSprop(learning_rate=0.00025))
+        model.add(Dense(units=128, activation='relu', input_dim=self.input_dim))
+        model.add(Dense(units=256, activation='relu'))
+        model.add(Dense(units=8, activation='softmax'))
+        # model.build((None, 2))
+        model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
         return model
+
+
 
     def load_model(self):
         model = keras.models.load_model('models')
