@@ -49,5 +49,5 @@ class Runner:
                 obs = self.env.step(action)
                 self.score += obs.reward
             self.summarize()
-            print(self.agent.epsilon_decay(self.episode), self.current_average)
+            print('Average: ', self.current_average)
 

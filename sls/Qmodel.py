@@ -12,12 +12,12 @@ class Model:
         self.batch_size = batch_size
         self.input_dim = input_dim
         self.learning_rate = 0.00025
+        self.save = './models/policy_weights_final.h5'
         self.loss = self.error
         self.step_size = 1
-        if train:
-            self.model = self.create_model()
-        else:
-            self.model = self.load_model()
+        self.model = self.create_model()
+        if not train:
+            self.load_model()
 
     def error(self, action_G, policy):
         G, action_index = action_G[:, 0], tf.cast(action_G[:, 1], tf.int32)
@@ -42,14 +42,8 @@ class Model:
         return model
 
 
-
     def load_model(self):
-        model = keras.models.load_model('models')
-        model.compile(loss='mse', optimizer=RMSprop(learning_rate=0.00025))
-        return model
-
-
-
+        self.model.load_weights(self.save)
 
     def save_model(self):
         self.model.save('models')

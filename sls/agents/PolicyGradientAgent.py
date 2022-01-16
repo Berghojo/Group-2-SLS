@@ -44,26 +44,8 @@ class PolicyAgent(AbstractAgent):
     def step(self, obs):
         self.step_count += 1
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
-            reward = self.reward_pos if obs.reward > 0 else self.reward_neg
-            if self.current_distance is not None:
-                self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
-            if obs.last() or reward > 0:
-                reward_sum = []
-                train_states = []
-                for t, sar in enumerate(self.sar_batch):
-                    reward = 0
-                    for i in range(len(self.sar_batch) - t):
-                        reward = reward + self.gamma ** i * self.sar_batch[i + t].reward
-
-                    reward_sum.append([reward, self.actions.index(sar.action)])
-                    train_states.append(sar.state)
-                train_states = np.array(train_states)
-                reward_sum = np.array(reward_sum)
-                self.network.model.fit(train_states, reward_sum, batch_size=len(reward_sum))
-                self.new_episode = False
-                self.current_distance = None
-                self.sar_batch = []
-
+            if self.train:
+                self.train_agent(obs)
             marine = self._get_marine(obs)
             beacon_object = self._get_beacon(obs)
 
@@ -80,6 +62,27 @@ class PolicyAgent(AbstractAgent):
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
+
+    def train_agent(self, obs):
+        reward = self.reward_pos if obs.reward > 0 else self.reward_neg
+        if self.current_distance is not None:
+            self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
+        if obs.last() or reward > 0:
+            reward_sum = []
+            train_states = []
+            for t, sar in enumerate(self.sar_batch):
+                reward = 0
+                for i in range(len(self.sar_batch) - t):
+                    reward = reward + self.gamma ** i * self.sar_batch[i + t].reward
+
+                reward_sum.append([reward, self.actions.index(sar.action)])
+                train_states.append(sar.state)
+            train_states = np.array(train_states)
+            reward_sum = np.array(reward_sum)
+            self.network.model.fit(train_states, reward_sum, batch_size=len(reward_sum))
+            self.new_episode = False
+            self.current_distance = None
+            self.sar_batch = []
 
     def save_model(self, filename='models'):
         self.network.model.save_weights(self.save)
