@@ -9,7 +9,7 @@ _CONFIG = dict(
     minimap_size=16,
     visualize=False,
     train=True,
-    agent=PolicyAgent,
+    agent=A2CAgent,
     load_path='./pickles/'
 )
 

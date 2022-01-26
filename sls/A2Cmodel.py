@@ -1,5 +1,5 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer, Conv2D
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow import keras
 import tensorflow as tf
@@ -7,12 +7,12 @@ import numpy as np
 import sys
 
 
-class Model:
+class A2CModel:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
         self.input_dim = input_dim
         self.learning_rate = 0.00025
-        self.save = './models/policy_weights_final.h5'
+        self.save = './models/A2C_weights_final.h5'
         self.loss = self.error
         self.step_size = 1
         self.model = self.create_model()
@@ -33,14 +33,18 @@ class Model:
         return error
 
     def create_model(self):
-        model = Sequential()
-        model.add(Dense(units=128, activation='relu', input_dim=self.input_dim))
-        model.add(Dense(units=256, activation='relu'))
-        model.add(Dense(units=8, activation='softmax'))
-        # model.build((None, 2))
-        model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
-        return model
+        inputs = Input(shape=(16, 16, 1), name="img")
+        x = Conv2D(16, 5, strides=1, padding="same", activation="relu")(inputs)
+        x = Conv2D(32, 3, strides=1, padding="same", activation="relu")(x)
+        x = Dense(128, activation="relu")(x)
+        actor = Dense(8, activation="softmax")(x)
+        critic = Dense(1, activation="linear")(x)
+        model = Model(inputs=inputs,
+                      outputs=[actor, critic],
+                      name='A2C')
 
+        model.summary()
+        return model
 
     def load_model(self):
         self.model.load_weights(self.save)

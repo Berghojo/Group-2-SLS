@@ -1,88 +1,78 @@
 import sys
-
 from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
-from sls.expreplay import ExperienceReplay
-from sls.expreplay import Experience
-from sls.Qmodel import Model
-import random
-from collections import namedtuple
+from sls.A2Cmodel import A2CModel
 import tensorflow as tf
-import pandas as pd
+from collections import namedtuple
 
 SAR = namedtuple("SAR", ["state", "action", "reward"])
 
 
-class PolicyAgent(AbstractAgent):
+class A2CAgent(AbstractAgent):
     def __init__(self, screen_size, train=True):
         tf.compat.v1.disable_eager_execution()
-        super(PolicyAgent, self).__init__(screen_size)
-        self.save = './models/policy_weights_final.h5'
+        super(A2CAgent, self).__init__(screen_size)
+        self.save = './models/A2C_weights_final.h5'
         self.actions = list(self._DIRECTIONS.keys())
-        self.verbose = 0
-        self.update_target_interval = 300
-        self.min_exp_len = 6000
-        self.batch_size = 32
-        self.reward_pos = 100
-        self.new_episode = False
-        self.reward_neg = -0.1
-        self.next_distance = None
-        self.new_game = True
         self.train = train
-        self.network = Model(2, train)
-        self.gamma = 0.99
-        # self.gamma = 0.00025
-        self.step_count = 0
-        self.new_episode = False
+        self.network = A2CModel(2, train)
+        self.mini_batch_size = 64
+        self.learning_rate = 0.0007
+        self.entropy_constant = 0.005
+        self.value_constant = 0.5
+        self.n_step_return = 5
         self.sar_batch = []
-        self.experience_replay = ExperienceReplay()
-        self.new_game = True
-        self.current_distance = None
-        self.current_action = None
+        self.current_state = None
 
     def step(self, obs):
         self.step_count += 1
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
-            if self.train:
-                self.train_agent(obs)
+
             marine = self._get_marine(obs)
             beacon_object = self._get_beacon(obs)
 
             if beacon_object is None or marine is None:
                 return self._NO_OP
 
-            beacon_coordinates = self._get_unit_pos(beacon_object)
             marine_coordinates = self._get_unit_pos(marine)
-            self.current_distance = np.array((beacon_coordinates - marine_coordinates) / self.screen_size)
-            policy_probability = self.network.model.predict(np.array([self.current_distance]))
+
+            self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
+            policy_probability, value = self.network.model.predict([np.array(self.current_state)])
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
-            self.current_action = direction_key
+
+            if self.train:
+                self.train_agent(obs, value)
+
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
-    def train_agent(self, obs):
+    def train_agent(self, obs, value):
         reward = self.reward_pos if obs.reward > 0 else self.reward_neg
-        if self.current_distance is not None:
+        if self.current_state is not None:
             self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
+
         if obs.last() or reward > 0:
-            reward_sum = []
-            train_states = []
+            reward_sum = np.array()
+            train_states = np.array()
             for t, sar in enumerate(self.sar_batch):
                 reward = 0
-                for i in range(len(self.sar_batch) - t):
-                    reward = reward + self.gamma ** i * self.sar_batch[i + t].reward
+                if len(self.sar_batch) - t < 5:
+                    break
+
+                for offset in range(self.n_step_return):    # G
+                    if offset == self.n_step_return - 1:
+                        reward += self.gamma ** self.n_step_return * value
+                    else: reward += self.gamma ** offset * self.sar_batch[t + offset].reward
 
                 reward_sum.append([reward, self.actions.index(sar.action)])
                 train_states.append(sar.state)
-            train_states = np.array(train_states)
-            reward_sum = np.array(reward_sum)
             self.network.model.fit(train_states, reward_sum, batch_size=len(reward_sum))
             self.new_episode = False
-            self.current_distance = None
-            self.sar_batch = []
+
+        self.sar_batch = []
 
     def save_model(self, filename='models'):
         self.network.model.save_weights(self.save)
