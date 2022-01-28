@@ -11,10 +11,13 @@ SAR = namedtuple("SAR", ["state", "action", "reward"])
 
 class A2CAgent(AbstractAgent):
     def __init__(self, screen_size, train=True):
+
         tf.compat.v1.disable_eager_execution()
         super(A2CAgent, self).__init__(screen_size)
         self.save = './models/A2C_weights_final.h5'
         self.actions = list(self._DIRECTIONS.keys())
+        self.pos_reward = 1
+        self.neg_reward = -0.01
         self.train = train
         self.network = A2CModel(2, train)
         self.mini_batch_size = 64
@@ -24,8 +27,11 @@ class A2CAgent(AbstractAgent):
         self.n_step_return = 5
         self.sar_batch = []
         self.current_state = None
+        self.current_action = None
         self.new_episode = True
+        self.step_count = 0
         self.entropy_loss = 0
+        self.gamma = 0.9
 
     def step(self, obs):
         self.step_count += 1
@@ -40,13 +46,13 @@ class A2CAgent(AbstractAgent):
             marine_coordinates = self._get_unit_pos(marine)
 
             self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
-            policy_probability, value = self.network.model.predict([np.array(self.current_state)])
+            policy_probability, value = self.network.model.predict(np.array([self.current_state]))
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
 
             entropy = -np.sum(policy_probability * np.log(policy_probability))
             self.entropy_loss += entropy
-
+            self.current_action = direction_key
             if self.train:
                 self.train_agent(obs, value, policy_probability[self.actions.index(direction_key)])
 
@@ -55,13 +61,14 @@ class A2CAgent(AbstractAgent):
             return self._SELECT_ARMY
 
     def train_agent(self, obs, value, policy_action):
-        reward = self.reward_pos if obs.reward > 0 else self.reward_neg
+        reward = self.pos_reward if obs.reward > 0 else self.neg_reward
         if self.current_state is not None:
-            self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
+            self.sar_batch.append(SAR(self.current_state, self.current_action, reward))
 
         if obs.last() or reward > 0:
-            reward_sum = np.array()
-            train_states = np.array()
+            reward_sum = []
+            train_states = []
+            'calculating values'
             for t, sar in enumerate(self.sar_batch):
                 q_val = 0
                 if len(self.sar_batch) - t < self.n_step_return:  # n-step is always same size
@@ -75,9 +82,9 @@ class A2CAgent(AbstractAgent):
                 advantage = q_val - value
                 reward_sum.append([advantage, policy_action])
                 train_states.append(sar.state)
-
+            print('extending')
             for element in reward_sum:
-                element.extend(self.entropy_loss / self.step_count)
+                element.extend(self.entropy_loss / self.step_count) # entropy_loss mean
 
             self.network.model.fit(train_states, reward_sum, batch_size=self.mini_batch_size)
             self.new_episode = False

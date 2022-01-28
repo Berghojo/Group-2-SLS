@@ -11,7 +11,7 @@ class A2CModel:
     def __init__(self, input_dim, train, batch_size=32):
         self.batch_size = batch_size
         self.input_dim = input_dim
-        self.learning_rate = 0.00025
+        self.learning_rate = 0.0007
         self.save = './models/A2C_weights_final.h5'
         self.loss = self.error
         self.step_size = 1
@@ -19,26 +19,20 @@ class A2CModel:
         if not train:
             self.load_model()
 
-    def error(self, action_G, policy):
-        G, action_index, entropy = action_G[:, 0], tf.cast(action_G[:, 1], tf.int32), action_G[:, 2]
-        idx = tf.range(0, tf.size(action_index))
-        positions = tf.stack([idx, action_index], axis=1)
-        policy_action = tf.gather_nd(policy, positions)
-        log_policy = tf.math.negative(tf.math.log(policy_action))
-        tf.stop_gradient()
-        # G = tf.math.negative(G)
-
-        entropy / tf.cast(tf.size(G), tf.float32)
-
-        error_t = log_policy * G
-        error_sum = tf.math.reduce_sum(error_t)
-        error = error_sum / tf.cast(tf.size(G), tf.float32)
-        return error
+    def error(self, labels, policy_values):
+        c_val = tf.constant(0.5)
+        c_h = tf.constant(0.005)
+        advantage, policy_action, entropy = labels[:0], labels[:1], labels[:2]
+        policy_loss = tf.math.reduce_mean(tf.stop_gradient(advantage) * tf.math.log(policy_action))
+        value_loss = tf.math.reduce_mean(tf.math.square(advantage))
+        loss = policy_loss + c_val * value_loss + c_h * entropy
+        return loss
 
     def create_model(self):
         inputs = Input(shape=(16, 16, 1), name="img")
         x = Conv2D(16, 5, strides=1, padding="same", activation="relu")(inputs)
         x = Conv2D(32, 3, strides=1, padding="same", activation="relu")(x)
+        x = Flatten()(x)
         x = Dense(128, activation="relu")(x)
         actor = Dense(8, activation="softmax")(x)
         critic = Dense(1, activation="linear")(x)
@@ -47,6 +41,7 @@ class A2CModel:
                       name='A2C')
 
         model.summary()
+        model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
         return model
 
     def load_model(self):
