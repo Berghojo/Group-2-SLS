@@ -46,7 +46,8 @@ class A2CAgent(AbstractAgent):
             marine_coordinates = self._get_unit_pos(marine)
 
             self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
-            policy_probability, value = self.network.model.predict(np.array([self.current_state]))
+            self.current_state = np.array(self.current_state)
+            policy_probability, value = self.network.model.predict(np.array(self.current_state.reshape([1, 16, 16, 1])))
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
 
@@ -69,6 +70,7 @@ class A2CAgent(AbstractAgent):
             reward_sum = []
             train_states = []
             'calculating values'
+
             for t, sar in enumerate(self.sar_batch):
                 q_val = 0
                 if len(self.sar_batch) - t < self.n_step_return:  # n-step is always same size
@@ -80,16 +82,18 @@ class A2CAgent(AbstractAgent):
                     q_val += self.gamma ** offset * self.sar_batch[t + offset].reward
 
                 advantage = q_val - value
+
                 reward_sum.append([advantage, policy_action])
                 train_states.append(sar.state)
             print('extending')
             for element in reward_sum:
-                element.extend(self.entropy_loss / self.step_count) # entropy_loss mean
-
+                element.append(self.entropy_loss / self.step_count) # entropy_loss mean
+            train_states = np.array(train_states)
+            reward_sum = np.array([reward_sum, reward_sum])
             self.network.model.fit(train_states, reward_sum, batch_size=self.mini_batch_size)
             self.new_episode = False
 
-        self.sar_batch = []
+            self.sar_batch = []
 
     def save_model(self, filename='models'):
         self.network.model.save_weights(self.save)

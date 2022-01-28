@@ -34,8 +34,8 @@ class A2CModel:
         x = Conv2D(32, 3, strides=1, padding="same", activation="relu")(x)
         x = Flatten()(x)
         x = Dense(128, activation="relu")(x)
-        actor = Dense(8, activation="softmax")(x)
-        critic = Dense(1, activation="linear")(x)
+        actor = Dense(8, activation="softmax", name="actor_out")(x)
+        critic = Dense(1, activation="linear", name="critic_out")(x)
         model = Model(inputs=inputs,
                       outputs=[actor, critic],
                       name='A2C')
