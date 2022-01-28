@@ -24,6 +24,8 @@ class A2CAgent(AbstractAgent):
         self.n_step_return = 5
         self.sar_batch = []
         self.current_state = None
+        self.new_episode = True
+        self.entropy_loss = 0
 
     def step(self, obs):
         self.step_count += 1
@@ -42,14 +44,17 @@ class A2CAgent(AbstractAgent):
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
 
+            entropy = -np.sum(policy_probability * np.log(policy_probability))
+            self.entropy_loss += entropy
+
             if self.train:
-                self.train_agent(obs, value)
+                self.train_agent(obs, value, policy_probability[self.actions.index(direction_key)])
 
             return self._dir_to_sc2_action(direction_key, marine_coordinates)
         else:
             return self._SELECT_ARMY
 
-    def train_agent(self, obs, value):
+    def train_agent(self, obs, value, policy_action):
         reward = self.reward_pos if obs.reward > 0 else self.reward_neg
         if self.current_state is not None:
             self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
@@ -58,18 +63,23 @@ class A2CAgent(AbstractAgent):
             reward_sum = np.array()
             train_states = np.array()
             for t, sar in enumerate(self.sar_batch):
-                reward = 0
-                if len(self.sar_batch) - t < 5:
+                q_val = 0
+                if len(self.sar_batch) - t < self.n_step_return:  # n-step is always same size
                     break
 
                 for offset in range(self.n_step_return):    # G
                     if offset == self.n_step_return - 1:
-                        reward += self.gamma ** self.n_step_return * value
-                    else: reward += self.gamma ** offset * self.sar_batch[t + offset].reward
+                        q_val += self.gamma ** self.n_step_return * value
+                    q_val += self.gamma ** offset * self.sar_batch[t + offset].reward
 
-                reward_sum.append([reward, self.actions.index(sar.action)])
+                advantage = q_val - value
+                reward_sum.append([advantage, policy_action])
                 train_states.append(sar.state)
-            self.network.model.fit(train_states, reward_sum, batch_size=len(reward_sum))
+
+            for element in reward_sum:
+                element.extend(self.entropy_loss / self.step_count)
+
+            self.network.model.fit(train_states, reward_sum, batch_size=self.mini_batch_size)
             self.new_episode = False
 
         self.sar_batch = []

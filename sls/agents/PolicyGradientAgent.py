@@ -67,6 +67,7 @@ class PolicyAgent(AbstractAgent):
         reward = self.reward_pos if obs.reward > 0 else self.reward_neg
         if self.current_distance is not None:
             self.sar_batch.append(SAR(self.current_distance, self.current_action, reward))
+
         if obs.last() or reward > 0:
             reward_sum = []
             train_states = []

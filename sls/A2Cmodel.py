@@ -20,12 +20,15 @@ class A2CModel:
             self.load_model()
 
     def error(self, action_G, policy):
-        G, action_index = action_G[:, 0], tf.cast(action_G[:, 1], tf.int32)
+        G, action_index, entropy = action_G[:, 0], tf.cast(action_G[:, 1], tf.int32), action_G[:, 2]
         idx = tf.range(0, tf.size(action_index))
         positions = tf.stack([idx, action_index], axis=1)
         policy_action = tf.gather_nd(policy, positions)
         log_policy = tf.math.negative(tf.math.log(policy_action))
+        tf.stop_gradient()
         # G = tf.math.negative(G)
+
+        entropy / tf.cast(tf.size(G), tf.float32)
 
         error_t = log_policy * G
         error_sum = tf.math.reduce_sum(error_t)
