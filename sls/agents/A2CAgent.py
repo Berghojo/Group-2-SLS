@@ -6,7 +6,7 @@ from sls.A2Cmodel import A2CModel
 import tensorflow as tf
 from collections import namedtuple
 
-SAR = namedtuple("SAR", ["state", "action", "reward"])
+SAR = namedtuple("SAR", ["state", "action", "reward", "value"])
 
 
 class A2CAgent(AbstractAgent):
@@ -29,9 +29,9 @@ class A2CAgent(AbstractAgent):
         self.current_state = None
         self.current_action = None
         self.new_episode = True
-        self.step_count = 0
+        self.step_count = 1
         self.entropy_loss = 0
-        self.gamma = 0.9
+        self.gamma = 0.99
 
     def step(self, obs):
         self.step_count += 1
@@ -47,7 +47,8 @@ class A2CAgent(AbstractAgent):
 
             self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
             self.current_state = np.array(self.current_state)
-            policy_probability, value = self.network.model.predict(np.array(self.current_state.reshape([1, 16, 16, 1])))
+            prediction = self.network.model.predict(np.array(self.current_state.reshape([1, 16, 16, 1])))[0]
+            policy_probability, value = prediction[:-1], prediction[8]
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
 
@@ -64,7 +65,7 @@ class A2CAgent(AbstractAgent):
     def train_agent(self, obs, value, policy_action):
         reward = self.pos_reward if obs.reward > 0 else self.neg_reward
         if self.current_state is not None:
-            self.sar_batch.append(SAR(self.current_state, self.current_action, reward))
+            self.sar_batch.append(SAR(self.current_state, self.current_action, reward, value))
 
         if obs.last() or reward > 0:
             reward_sum = []
@@ -73,26 +74,23 @@ class A2CAgent(AbstractAgent):
 
             for t, sar in enumerate(self.sar_batch):
                 q_val = 0
-                if len(self.sar_batch) - t < self.n_step_return:  # n-step is always same size
-                    break
 
                 for offset in range(self.n_step_return):    # G
-                    if offset == self.n_step_return - 1:
-                        q_val += self.gamma ** self.n_step_return * value
                     q_val += self.gamma ** offset * self.sar_batch[t + offset].reward
+                    if t + offset >= len(self.sar_batch)-1:
+                        break
+                    elif offset == self.n_step_return-1:
+                        q_val += self.gamma ** self.n_step_return * self.sar_batch[t + self.n_step_return].value
 
-                advantage = q_val - value
-
-                reward_sum.append([advantage, policy_action])
+                reward_sum.append([q_val, self.actions.index(sar.action)])
                 train_states.append(sar.state)
-            print('extending')
+            entropy_loss = -(self.entropy_loss / len(reward_sum))
             for element in reward_sum:
-                element.append(self.entropy_loss / self.step_count) # entropy_loss mean
+                element.append(entropy_loss) # entropy_loss mean
             train_states = np.array(train_states)
-            reward_sum = np.array([reward_sum, reward_sum])
-            self.network.model.fit(train_states, reward_sum, batch_size=self.mini_batch_size)
-            self.new_episode = False
-
+            reward_sum = np.array(reward_sum)
+            self.network.model.fit(train_states, y=reward_sum, batch_size=self.mini_batch_size)
+            self.current_state = None
             self.sar_batch = []
 
     def save_model(self, filename='models'):

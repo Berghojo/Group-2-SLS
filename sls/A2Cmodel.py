@@ -19,27 +19,33 @@ class A2CModel:
         if not train:
             self.load_model()
 
-    def error(self, labels, policy_values):
+    def error(self, labels, policy_value):
         c_val = tf.constant(0.5)
         c_h = tf.constant(0.005)
-        advantage, policy_action, entropy = labels[:0], labels[:1], labels[:2]
-        policy_loss = tf.math.reduce_mean(tf.stop_gradient(advantage) * tf.math.log(policy_action))
+        value = policy_value[:, 8]
+        policy = policy_value[:, :-1]
+        q_val, action_index, entropy = labels[:, 0], tf.cast(labels[:, 1], tf.int32), labels[:, 2]
+        idx = tf.range(0, tf.size(action_index))
+        advantage = q_val - value
+        positions = tf.stack([idx, action_index], axis=1)
+        policy_action = tf.gather_nd(policy, positions)
+        policy_loss = tf.math.negative(tf.math.reduce_mean(tf.stop_gradient(advantage) * tf.math.log(policy_action)))
         value_loss = tf.math.reduce_mean(tf.math.square(advantage))
         loss = policy_loss + c_val * value_loss + c_h * entropy
         return loss
 
     def create_model(self):
         inputs = Input(shape=(16, 16, 1), name="img")
-        x = Conv2D(16, 5, strides=1, padding="same", activation="relu")(inputs)
-        x = Conv2D(32, 3, strides=1, padding="same", activation="relu")(x)
-        x = Flatten()(x)
-        x = Dense(128, activation="relu")(x)
+        l1 = Conv2D(16, (5, 5), strides=1, padding="same", activation="relu")(inputs)
+        l2 = Conv2D(32, (3, 3), strides=1, padding="same", activation="relu")(l1)
+        l3 = Flatten()(l2)
+        x = Dense(128, activation="relu")(l3)
         actor = Dense(8, activation="softmax", name="actor_out")(x)
         critic = Dense(1, activation="linear", name="critic_out")(x)
+        prediction = tf.concat([actor, critic], 1)
         model = Model(inputs=inputs,
-                      outputs=[actor, critic],
+                      outputs=prediction,
                       name='A2C')
-
         model.summary()
         model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
         return model

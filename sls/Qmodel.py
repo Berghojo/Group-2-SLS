@@ -23,8 +23,10 @@ class Model:
     def loss_function(self, labels, policy_value_tuple):
         c_val = tf.constant(0.5)
         c_h = tf.constant(0.005)
+        policy_probabilty, value = policy_value_tuple
+        advantage = q_val - value
         advantage, policy_action, entropy = labels[:0], labels[:1], labels[:2]
-        policy_loss = tf.mean(tf.stop_gradient(advantage) * np.log(policy_action))
+        policy_loss = tf.mean(tf.stop_gradient(advantage) * tf.log(policy_action))
         value_loss = tf.mean(tf.math.square(advantage))
         loss = policy_loss + c_val * value_loss + c_h * entropy
         return loss
