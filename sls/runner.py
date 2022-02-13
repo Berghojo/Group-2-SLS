@@ -3,6 +3,7 @@ import gc
 import os
 import tensorflow as tf
 import numpy as np
+from sls.agents import *
 from multiprocessing import Process, Pipe
 import tracemalloc
 
@@ -47,25 +48,29 @@ class Runner:
 
 
     def start_workers(self, env_function):
-        worker_handles = [Worker(env_function, 1) for _ in range(self.num_workers)]
-        print('the what')
+        worker_handles = [Worker(env_function, self.agent.screen_size, self.agent.train) for _ in range(self.num_workers)]
         self.worker_processes = [Process(target=worker_handle.run_worker) for worker_handle in worker_handles]
         print(self.worker_processes)
         for process in self.worker_processes:
             process.start()
 
+
 class Worker:
 
-    def __init__(self, env_func, agent):
+    def __init__(self, env_func, screen_size, train):
         self.env_func = env_func
         self.episode = 0
-        self.agent = agent
+        self.screen_size = screen_size
+        self.train = train
+        self.agent = None
         self.env = None
         self.score = 0
 
     def run_worker(self):
         episodes = 1000
         self.env = self.env_func()
+        self.agent = RandomAgent(self.train, self.screen_size)
+        print(self.agent)
         while self.episode <= episodes:
             obs = self.env.reset()
             while True:
