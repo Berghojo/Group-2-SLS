@@ -3,7 +3,9 @@ from sls import helper
 from sls.agents import AbstractAgent
 import numpy as np
 from sls.A2Cmodel import A2CModel
+from multiprocessing.managers import BaseManager
 import tensorflow as tf
+from multiprocessing import Lock
 from collections import namedtuple
 
 SAR = namedtuple("SAR", ["state", "action", "reward", "value"])
@@ -12,7 +14,6 @@ SAR = namedtuple("SAR", ["state", "action", "reward", "value"])
 class A2CAgent(AbstractAgent):
     def __init__(self, screen_size, train, network):
         id = 1
-        tf.compat.v1.disable_eager_execution()
         print(f'Created Agent {id}')
         super(A2CAgent, self).__init__(screen_size)
         self.save = f'./models/A2C_weights_final_{id}.h5'
@@ -20,6 +21,7 @@ class A2CAgent(AbstractAgent):
         self.pos_reward = 1
         self.neg_reward = -0.01
         self.train = train
+        self.lock = Lock()
         self.network = network
         self.mini_batch_size = 64
         self.learning_rate = 0.0007
@@ -32,12 +34,16 @@ class A2CAgent(AbstractAgent):
         self.new_episode = True
         self.step_count = 1
         self.entropy_loss = 0
+        self.last_value = None
         self.gamma = 0.99
 
-    def step(self, obs):
-        print(self.step_count, 'step')
+    def step(self, obs, prediction):
         self.step_count += 1
         if self._MOVE_SCREEN.id in obs.observation.available_actions:
+
+            reward = self.pos_reward if obs.reward > 0 else self.neg_reward
+            if self.current_state is not None:
+                self.sar_batch.append(SAR(self.current_state, self.current_action, reward, self.last_value))
 
             marine = self._get_marine(obs)
             beacon_object = self._get_beacon(obs)
@@ -49,14 +55,10 @@ class A2CAgent(AbstractAgent):
 
             self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
             self.current_state = np.array(self.current_state)
-            prediction = self.network.model.predict(np.array(self.current_state.reshape([1, 16, 16, 1])))[0]
-            print(self.network.model)
             policy_probability, value = prediction[:-1], prediction[8]
+            self.last_value = value
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
-
-            entropy = -np.sum(policy_probability * np.log(policy_probability))
-            self.entropy_loss += entropy
             self.current_action = direction_key
             #if self.train:
             #    self.train_agent(obs, value, policy_probability[self.actions.index(direction_key)])
@@ -65,10 +67,7 @@ class A2CAgent(AbstractAgent):
         else:
             return self._SELECT_ARMY
 
-    def train_agent(self, obs, value, policy_action):
-        reward = self.pos_reward if obs.reward > 0 else self.neg_reward
-        if self.current_state is not None:
-            self.sar_batch.append(SAR(self.current_state, self.current_action, reward, value))
+    def train_agent(self, obs):
 
         if obs.last() or reward > 0:
             reward_sum = []
@@ -101,3 +100,7 @@ class A2CAgent(AbstractAgent):
 
     def load_model(self, directory, filename='models'):
         self.network.model.load_weights(self.save)
+
+
+class KerasManager(BaseManager):
+    pass

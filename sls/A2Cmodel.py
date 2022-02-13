@@ -1,6 +1,7 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer, Conv2D
 from tensorflow.keras.optimizers import RMSprop
+
 from tensorflow import keras
 import tensorflow as tf
 import numpy as np
@@ -45,7 +46,9 @@ class A2CModel:
         model = Model(inputs=inputs,
                       outputs=prediction,
                       name='A2C')
+
         model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
+        #model.summary()
         return model
 
     def load_model(self):
