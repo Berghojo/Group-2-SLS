@@ -1,7 +1,7 @@
 from absl import app
 from sls import Env, Runner
 from sls.agents import *
-from multiprocessing import Process, Pipe
+
 
 _CONFIG = dict(
     episodes=5000,
@@ -14,6 +14,13 @@ _CONFIG = dict(
 )
 
 
+def create_env_func():
+    return Env(
+        screen_size=_CONFIG['screen_size'],
+        minimap_size=_CONFIG['minimap_size'],
+        visualize=_CONFIG['visualize']
+    )
+
 def main(unused_argv):
 
     agent = _CONFIG['agent'](
@@ -21,23 +28,15 @@ def main(unused_argv):
         screen_size=_CONFIG['screen_size']
     )
 
-    env = Env(
-        screen_size=_CONFIG['screen_size'],
-        minimap_size=_CONFIG['minimap_size'],
-        visualize=_CONFIG['visualize']
-    )
-
     runner = Runner(
         agent=agent,
-        env=env,
         train=_CONFIG['train'],
-        load_path=_CONFIG['load_path']
+        load_path=_CONFIG['load_path'],
+        config=_CONFIG
     )
 
-    runner.run(episodes=_CONFIG['episodes'])
+    runner.run(episodes=_CONFIG['episodes'], env_func=create_env_func)
 
 
 if __name__ == "__main__":
-    p = Process(target=app.run, args=(main,))
-    p.start()
-    p.join()
+    app.run(main)

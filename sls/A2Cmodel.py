@@ -46,7 +46,6 @@ class A2CModel:
         model = Model(inputs=inputs,
                       outputs=prediction,
                       name='A2C')
-        model.summary()
         model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
         return model
 
