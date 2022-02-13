@@ -51,8 +51,14 @@ class A2CAgent(AbstractAgent):
             policy_probability, value = prediction[:-1], prediction[8]
             policy_probability = np.squeeze(policy_probability)
             direction_key = np.random.choice(self.actions, p=policy_probability)
-
-            entropy = -np.sum(policy_probability * np.log(policy_probability))
+            skip = False
+            for val in policy_probability:
+                if val == 0:
+                    skip = True
+            if skip:
+                entropy = 0
+            else:
+                entropy = -np.sum(policy_probability * np.log(policy_probability))
             self.entropy_loss += entropy
             self.current_action = direction_key
             if self.train:
@@ -81,12 +87,14 @@ class A2CAgent(AbstractAgent):
                         break
                     elif offset == self.n_step_return-1:
                         q_val += self.gamma ** self.n_step_return * self.sar_batch[t + self.n_step_return].value
-
+                    #print(self.sar_batch[t + offset].reward)
+                print(q_val)
                 reward_sum.append([q_val, self.actions.index(sar.action)])
                 train_states.append(sar.state)
             entropy_loss = -(self.entropy_loss / len(reward_sum))
             for element in reward_sum:
                 element.append(entropy_loss) # entropy_loss mean
+            self.entropy_loss = 0
             train_states = np.array(train_states)
             reward_sum = np.array(reward_sum)
             self.network.model.fit(train_states, y=reward_sum, batch_size=self.mini_batch_size)

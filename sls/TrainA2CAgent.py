@@ -4,7 +4,7 @@ from sls.agents import *
 from multiprocessing import Process, Pipe
 
 _CONFIG = dict(
-    episodes=5000,
+    episodes=15000,
     screen_size=16,
     minimap_size=16,
     visualize=False,
