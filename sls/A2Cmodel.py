@@ -38,11 +38,15 @@ class A2CModel:
         inputs = Input(shape=(16, 16, 1), name="img")
         l1 = Conv2D(16, (5, 5), strides=1, padding="same", activation="relu")(inputs)
         l2 = Conv2D(32, (3, 3), strides=1, padding="same", activation="relu")(l1)
-        l3 = Flatten()(l2)
-        x = Dense(128, activation="relu")(l3)
-        actor = Dense(8, activation="softmax", name="actor_out")(x)
+        actor = Conv2D(1, (1, 1), strides=1, padding="same", activation="softmax", name="actor_out")(l2)
+        l3 = Flatten()(actor)
+        x = Dense(256, activation="relu")(l3)
         critic = Dense(1, activation="linear", name="critic_out")(x)
-        prediction = tf.concat([actor, critic], 1)
+
+        actor = tf.squeeze(actor, axis=0)
+        actor = tf.squeeze(actor, axis=-1)
+
+        prediction = [tf.concat([actor, critic], 1)]
         model = Model(inputs=inputs,
                       outputs=prediction,
                       name='A2C')
