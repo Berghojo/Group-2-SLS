@@ -12,7 +12,7 @@ SAR = namedtuple("SAR", ["state", "action", "reward", "value"])
 
 
 class A2CAgent(AbstractAgent):
-    def __init__(self, screen_size, train, network):
+    def __init__(self, screen_size, train):
         id = 1
         print(f'Created Agent {id}')
         super(A2CAgent, self).__init__(screen_size)
@@ -20,9 +20,6 @@ class A2CAgent(AbstractAgent):
         self.actions = list(self._DIRECTIONS.keys())
         self.pos_reward = 1
         self.neg_reward = -0.01
-        self.train = train
-        self.lock = Lock()
-        self.network = network
         self.mini_batch_size = 64
         self.learning_rate = 0.0007
         self.entropy_constant = 0.005

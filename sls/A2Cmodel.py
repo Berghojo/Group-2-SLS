@@ -51,11 +51,11 @@ class A2CModel:
         #model.summary()
         return model
 
-    def load_model(self):
-        self.model.load_weights(self.save)
+    def load_model(self, path):
+        self.model.load_weights(path)
 
-    def save_model(self):
-        self.model.save('models')
+    def save_model(self, path):
+        self.model.save(path)
 
 
 
