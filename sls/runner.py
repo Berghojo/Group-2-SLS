@@ -34,6 +34,7 @@ class Runner:
                     + ('_train_' if self.train else 'run_') \
                     + type(agent).__name__
         self.pipes = []
+        self.worker_handles = None
         self.writer = tf.summary.create_file_writer(self.path)
         #self.writer = tf.compat.v1.summary.FileWriter(self.path)
 
@@ -41,8 +42,6 @@ class Runner:
             self.network.load_model(load_path)
 
     def summarize(self):
-
-        self.scores_batch.append(self.score)
         with self.writer.as_default():
             average = np.mean(self.score / self.num_workers)
             tf.summary.scalar('Average Score of Workers per episode', average, step=self.episode)
@@ -56,58 +55,58 @@ class Runner:
     def run(self, episodes, env_func):
         self.start_workers(env_func)
         while self.episode <= episodes:
-            finished_workers = 0
+
             self.sar_batch = []
+            self.entropy_loss = 0
             for parent, _ in self.pipes:
                 parent.send('reset')
             not_new_episode = True
             while not_new_episode:
                 for parent, _ in self.pipes:
                     parent.send('step')
+
                 states = []
-                for parent, _ in self.pipes:  # Recv update from workers
+                for i, (parent, _) in enumerate(self.pipes):  # Send predictions to workers
                     state = parent.recv()
-
                     states.append(state)
-                states = np.array(states)
                 prediction = self.network.model.predict(np.array(states).reshape([-1, 16, 16, 1]), verbose=0)
+                for i, (parent, _) in enumerate(self.pipes):
 
-                i = 0
-                for parent, _ in self.pipes:
                     parent.send(prediction[i])
                     policy_probability = prediction[i][:-1]
 
                     if any(policy_probability) <= 0:
-                        print('ZERO')
                         entropy = 0
                     else:
                         entropy = -np.sum(policy_probability * np.log(policy_probability))
                     self.entropy_loss += entropy
-                    i += 1
-                worker_id = 0
-                for parent, _ in self.pipes:
-                    msg = parent.recv()
-                    worker_id += 1
-                    if msg == 'going':
-                        continue
-                    elif msg == 'done':
-                        finished_workers += 1
-                        with self.mutex:
-                            new_batch = parent.recv()
-                            self.sar_batch = self.sar_batch + new_batch
-                    else:   # Recv SAR batch
-                        with self.mutex:
-                            self.score += msg
-                            new_batch = parent.recv()
-                            self.sar_batch = self.sar_batch + new_batch
 
-                # Train network when all workers are done
-                if finished_workers == self.num_workers:
-                    with self.mutex:
-                        self.train_network()
-                    self.summarize()
-                    break
+                for parent, _ in self.pipes:    # Check worker status
+                    parent.send('check')
 
+                for i, (parent, _) in enumerate(self.pipes):  # Recv message from workers
+                    agent_response = parent.recv()
+
+                    if isinstance(agent_response, tuple):   # Agents finished one game
+                        agent_sar_batch, reward = agent_response
+                        self.sar_batch += agent_sar_batch
+                        self.score += reward
+
+                    elif isinstance(agent_response, int):    # If worker is finished
+                        if not agent_response in finished_agents:   # New agents finished
+                            finished_agents.append(agent_response)
+                            agent_sar_batch = parent.recv()
+                            self.sar_batch += agent_sar_batch
+                        else:   # Already finished agents (discard message)
+                            parent.recv()
+                        if len(finished_agents) == self.num_workers:    # All agents finished sync
+                            self.train_network()
+                            self.summarize()
+                            not_new_episode = False
+
+
+        for parent, _ in self.pipes:
+            parent.send('close')
         for process in self.worker_processes:
             process.join()
 
@@ -136,24 +135,24 @@ class Runner:
                 elif offset == self.n_step_return - 1:
                     q_val += self.gamma ** self.n_step_return * self.sar_batch[
                         t + self.n_step_return].value
-
             reward_sum.append([q_val, self.actions.index(sar.action)])
             train_states.append(sar.state)
 
         entropy_loss = -(self.entropy_loss / len(reward_sum))
         for element in reward_sum:
             element.append(entropy_loss)  # entropy_loss mean
+        self.entropy_loss = 0
         train_states = np.array(train_states)
 
         reward_sum = np.array(reward_sum)
         self.network.model.fit(train_states, y=reward_sum, batch_size=16, verbose=1)
-        self.current_state = None
         self.sar_batch = []
 
 
 class Worker:
 
-    def __init__(self, env_func, screen_size, train, agent, conn):
+    def __init__(self, env_func, screen_size, train, agent, conn, id):
+        self.id = id
         self.env_func = env_func
         self.episode = 0
         self.screen_size = screen_size
@@ -164,38 +163,36 @@ class Worker:
         self.score = 0
         self.conn = conn
         self.running = True
+        self.done = False
 
     def run_worker(self):
         self.env = self.env_func()
         obs = self.env.reset()
         while self.running:
             command = self.conn.recv()
-            if command == 'reset':
-                obs = self.env.reset()
-                self.agent.sar_batch = []
-
+            # Recv block
             if command == 'step':
-
                 current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
                 self.conn.send(current_state)
                 prediction = self.conn.recv()
-                action = self.agent.step(obs, prediction)
-                obs = self.env.step(action)
-                if obs.reward > 0:
-                    self.conn.send(obs.reward)
-                    self.conn.send(self.agent.sar_batch)
-                elif obs.last():
-                    self.conn.send('done')
-                    self.conn.send(self.agent.sar_batch)
+                if not obs.last():
+                    action = self.agent.step(obs, prediction)
+                    obs = self.env.step(action)
+
+            if command == "check":
+                if obs.last():  # Waiting
+                    self.conn.send(self.id)
+                    self.conn.send((self.agent.sar_batch))
+                    self.done = True
+                elif obs.reward > 0:
+                    self.conn.send((self.agent.sar_batch, obs.reward))
+                    self.agent.sar_batch = []
                 else:
-                    self.conn.send('going')
-            #while True:
-            #    current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
-            #    action = self.agent.step(obs)
-            #    if obs.last():
-            #        break
-            #    obs = self.env.step(action)
-            #    self.conn.send('Done')
-            #    self.score += obs.reward
-            # self.summarize()
-            # print('Average: ', self.current_average)
+                    self.conn.send('Nothing')
+            if command == 'reset':
+                self.agent.sar_batch = []
+                obs = self.env.reset()
+
+            if command == 'close':
+                self.running = False
+                self.conn.close()

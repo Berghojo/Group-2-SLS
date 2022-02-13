@@ -4,7 +4,7 @@ from sls.agents import *
 from sls.A2Cmodel import A2CModel
 
 _CONFIG = dict(
-    episodes=50,
+    episodes=5000,
     screen_size=16,
     minimap_size=16,
     visualize=False,

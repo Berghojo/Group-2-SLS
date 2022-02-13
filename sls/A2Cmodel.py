@@ -22,15 +22,20 @@ class A2CModel:
     def error(self, labels, policy_value):
         c_val = tf.constant(0.5)
         c_h = tf.constant(0.005)
+
         value = policy_value[:, 8]
         policy = policy_value[:, :-1]
+
         q_val, action_index, entropy = labels[:, 0], tf.cast(labels[:, 1], tf.int32), labels[:, 2]
+
         idx = tf.range(0, tf.size(action_index))
         advantage = q_val - value
         positions = tf.stack([idx, action_index], axis=1)
         policy_action = tf.gather_nd(policy, positions)
+
         policy_loss = tf.math.negative(tf.math.reduce_mean(tf.stop_gradient(advantage) * tf.math.log(policy_action)))
         value_loss = tf.math.reduce_mean(tf.math.square(advantage))
+
         loss = policy_loss + c_val * value_loss + c_h * entropy
         return loss
 
