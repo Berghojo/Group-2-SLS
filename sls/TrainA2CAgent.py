@@ -1,7 +1,7 @@
 from absl import app
 from sls import Env, Runner
 from sls.agents import *
-
+from sls.A2Cmodel import A2CModel
 
 _CONFIG = dict(
     episodes=5000,
@@ -25,7 +25,8 @@ def main(unused_argv):
 
     agent = _CONFIG['agent'](
         train=_CONFIG['train'],
-        screen_size=_CONFIG['screen_size']
+        screen_size=_CONFIG['screen_size'],
+        network=A2CModel(_CONFIG['train'])
     )
 
     runner = Runner(

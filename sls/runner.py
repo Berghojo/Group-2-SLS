@@ -2,10 +2,12 @@ import datetime
 import gc
 import os
 import tensorflow as tf
+from sls.A2Cmodel import A2CModel
 import numpy as np
 from sls.agents import *
 from multiprocessing import Process, Pipe
 import tracemalloc
+
 
 class Runner:
     def __init__(self, agent, train, load_path, config):
@@ -17,7 +19,7 @@ class Runner:
         self.score = 0  # store for the scores of an episode
         self.episode = 1  # episode counter
         self.current_average = 0
-        self.num_workers = 2
+        self.num_workers = 1
         self.worker_processes = []
         self.path = './graphs/' + datetime.datetime.now().strftime("%y%m%d_%H%M") \
                     + ('_train_' if self.train else 'run_') \
@@ -34,7 +36,9 @@ class Runner:
         self.scores_batch.append(self.score)
         if len(self.scores_batch) == 50:
             average = np.mean(self.scores_batch)
-            self.writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag='Moving Average Score (50) per Episode', simple_value=average)]), self.episode - 50)
+            self.writer.add_summary(tf.compat.v1.Summary(
+                value=[tf.compat.v1.Summary.Value(tag='Moving Average Score (50) per Episode', simple_value=average)]),
+                                    self.episode - 50)
             self.scores_batch.pop(0)
             self.current_average = average
         if self.train and self.episode % 10 == 0:
@@ -46,9 +50,9 @@ class Runner:
 
         self.start_workers(env_func)
 
-
     def start_workers(self, env_function):
-        worker_handles = [Worker(env_function, self.agent.screen_size, self.agent.train) for _ in range(self.num_workers)]
+        worker_handles = [Worker(env_function, self.config['screen_size'], self.config['train']) for _ in
+                          range(self.num_workers)]
         self.worker_processes = [Process(target=worker_handle.run_worker) for worker_handle in worker_handles]
         print(self.worker_processes)
         for process in self.worker_processes:
@@ -65,11 +69,12 @@ class Worker:
         self.agent = None
         self.env = None
         self.score = 0
+        self.network = A2CModel(train)
 
     def run_worker(self):
         episodes = 1000
         self.env = self.env_func()
-        self.agent = RandomAgent(self.train, self.screen_size)
+        self.agent = A2CAgent(self.screen_size, self.train, self.network)
         print(self.agent)
         while self.episode <= episodes:
             obs = self.env.reset()
@@ -79,5 +84,5 @@ class Worker:
                     break
                 obs = self.env.step(action)
                 self.score += obs.reward
-            #self.summarize()
-            #print('Average: ', self.current_average)
+            # self.summarize()
+            # print('Average: ', self.current_average)

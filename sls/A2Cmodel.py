@@ -8,9 +8,8 @@ import sys
 
 
 class A2CModel:
-    def __init__(self, input_dim, train, batch_size=32):
+    def __init__(self, train, batch_size=16):
         self.batch_size = batch_size
-        self.input_dim = input_dim
         self.learning_rate = 0.0007
         self.save = './models/A2C_weights_final.h5'
         self.loss = self.error
