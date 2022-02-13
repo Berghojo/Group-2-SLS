@@ -1,5 +1,5 @@
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer, Conv2D
+from tensorflow.keras.layers import Input, Flatten, Dense, InputLayer, Conv2D, Softmax
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow import keras
 import tensorflow as tf
@@ -38,16 +38,18 @@ class A2CModel:
         inputs = Input(shape=(16, 16, 1), name="img")
         l1 = Conv2D(16, (5, 5), strides=1, padding="same", activation="relu")(inputs)
         l2 = Conv2D(32, (3, 3), strides=1, padding="same", activation="relu")(l1)
-        l3 = Flatten()(l2)
-        x = Dense(128, activation="relu")(l3)
-        actor = Dense(8, activation="softmax", name="actor_out")(x)
-        critic = Dense(1, activation="linear", name="critic_out")(x)
-        prediction = tf.concat([actor, critic], 1)
+        actor = Conv2D(1, (1, 1), strides=1, padding="same", activation="linear", name="actor_out")(l2)
+        l3 = Flatten()(actor)
+        actor_flatten = Softmax(name='softmax_actor')(l3)
+        x = Dense(256, activation="relu")(actor_flatten)
+        critic = Dense(1, activation="linear", name="criticout")(x)
+        prediction = [tf.concat([actor_flatten, critic], 1)]
         model = Model(inputs=inputs,
                       outputs=prediction,
                       name='A2C')
-        model.summary()
+
         model.compile(loss=self.loss, optimizer=RMSprop(learning_rate=self.learning_rate))
+        # model.summary()
         return model
 
     def load_model(self):

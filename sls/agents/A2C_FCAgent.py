@@ -9,11 +9,11 @@ from collections import namedtuple
 SAR = namedtuple("SAR", ["state", "action", "reward", "value"])
 
 
-class A2CAgent(AbstractAgent):
+class A2C_FCAgent(AbstractAgent):
     def __init__(self, screen_size, train=True):
 
         tf.compat.v1.disable_eager_execution()
-        super(A2CAgent, self).__init__(screen_size)
+        super(A2C_FCAgent, self).__init__(screen_size)
         self.save = './models/A2C_weights_final.h5'
         self.actions = list(self._DIRECTIONS.keys())
         self.pos_reward = 1
@@ -48,9 +48,13 @@ class A2CAgent(AbstractAgent):
             self.current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
             self.current_state = np.array(self.current_state)
             prediction = self.network.model.predict(np.array(self.current_state.reshape([1, 16, 16, 1])))[0]
-            policy_probability, value = prediction[:-1], prediction[8]
+            policy_probability, value = prediction[:-1], prediction[-1]
             policy_probability = np.squeeze(policy_probability)
-            direction_key = np.random.choice(self.actions, p=policy_probability)
+
+
+            direction_key = np.random.choice(range(256), p=policy_probability)
+            next_pos = np.divmod(direction_key, 16)
+
             skip = False
             for val in policy_probability:
                 if val == 0:
@@ -62,9 +66,9 @@ class A2CAgent(AbstractAgent):
             self.entropy_loss += entropy
             self.current_action = direction_key
             if self.train:
-                self.train_agent(obs, value, policy_probability[self.actions.index(direction_key)])
+                self.train_agent(obs, value, policy_probability[direction_key])
 
-            return self._dir_to_sc2_action(direction_key, marine_coordinates)
+            return self._MOVE_SCREEN("now", next_pos)
         else:
             return self._SELECT_ARMY
 
@@ -88,8 +92,7 @@ class A2CAgent(AbstractAgent):
                     elif offset == self.n_step_return-1:
                         q_val += self.gamma ** self.n_step_return * self.sar_batch[t + self.n_step_return].value
                     #print(self.sar_batch[t + offset].reward)
-                print(q_val)
-                reward_sum.append([q_val, self.actions.index(sar.action)])
+                reward_sum.append([q_val, sar.action])
                 train_states.append(sar.state)
             entropy_loss = -(self.entropy_loss / len(reward_sum))
             for element in reward_sum:
