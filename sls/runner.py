@@ -65,11 +65,12 @@ class Runner:
                 for parent, _ in self.pipes:
                     parent.send('step')
                 states = []
+                for parent, _ in self.pipes:  # Recv update from workers
+                    state = parent.recv()
 
-                for parent, _ in self.pipes:
-                    states.append(parent.recv())
-
-                prediction = self.network.model.predict(np.array(states).reshape([-1, 16, 16, 1]), verbose = 0)
+                    states.append(state)
+                states = np.array(states)
+                prediction = self.network.model.predict(np.array(states).reshape([-1, 16, 16, 1]), verbose=0)
 
                 i = 0
                 for parent, _ in self.pipes:
@@ -87,15 +88,20 @@ class Runner:
                 for parent, _ in self.pipes:
                     msg = parent.recv()
                     worker_id += 1
-                    if msg == 'done':
+                    if msg == 'going':
+                        continue
+                    elif msg == 'done':
                         finished_workers += 1
                         with self.mutex:
                             new_batch = parent.recv()
-                            print(len(new_batch))
                             self.sar_batch = self.sar_batch + new_batch
-                    elif msg != 'waiting':
-                        self.score += msg
+                    else:   # Recv SAR batch
+                        with self.mutex:
+                            self.score += msg
+                            new_batch = parent.recv()
+                            self.sar_batch = self.sar_batch + new_batch
 
+                # Train network when all workers are done
                 if finished_workers == self.num_workers:
                     with self.mutex:
                         self.train_network()
@@ -138,6 +144,7 @@ class Runner:
         for element in reward_sum:
             element.append(entropy_loss)  # entropy_loss mean
         train_states = np.array(train_states)
+
         reward_sum = np.array(reward_sum)
         self.network.model.fit(train_states, y=reward_sum, batch_size=16, verbose=1)
         self.current_state = None
@@ -166,23 +173,22 @@ class Worker:
             if command == 'reset':
                 obs = self.env.reset()
                 self.agent.sar_batch = []
-                self.done = False
+
             if command == 'step':
+
                 current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
                 self.conn.send(current_state)
                 prediction = self.conn.recv()
-
-                if (obs.last() or obs.reward > 0) and not self.done:
+                action = self.agent.step(obs, prediction)
+                obs = self.env.step(action)
+                if obs.reward > 0:
+                    self.conn.send(obs.reward)
+                    self.conn.send(self.agent.sar_batch)
+                elif obs.last():
                     self.conn.send('done')
                     self.conn.send(self.agent.sar_batch)
-
-                    self.done = True
-                elif not self.done:
-                    action = self.agent.step(obs, prediction)
-                    obs = self.env.step(action)
-                    self.conn.send(obs.reward)
                 else:
-                    self.conn.send('waiting')
+                    self.conn.send('going')
             #while True:
             #    current_state = obs.observation.feature_screen['unit_density'].reshape([16, 16, 1])
             #    action = self.agent.step(obs)

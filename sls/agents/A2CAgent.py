@@ -80,7 +80,7 @@ class A2CAgent(AbstractAgent):
                         break
                     elif offset == self.n_step_return-1:
                         q_val += self.gamma ** self.n_step_return * self.sar_batch[t + self.n_step_return].value
-
+                print(q_val)
                 reward_sum.append([q_val, self.actions.index(sar.action)])
                 train_states.append(sar.state)
             entropy_loss = -(self.entropy_loss / len(reward_sum))
